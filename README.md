@@ -14,11 +14,13 @@
 This project is in progress.
 
 ## Hardware Used
-** Requirements **
-* 1x NodeMCU 1.0 (ESP8266)
+#### Requirements
+* 1x NodeMCU 1.0 (ESP8266) *
 * 1x WS2812b/SK6812 LED Strip or "Neopixel" LED Strip
 
-** Optional **
+_*You can use any Wifi-capable Arduino, your mileage may vary_
+
+## Optional
 * 1x 10k Ω resistor
 * 1x 470 Ω resistor
 * 1x 3-pin male header (for LED connections)
