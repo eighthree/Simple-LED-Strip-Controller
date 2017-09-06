@@ -15,6 +15,7 @@
  *  Adafruit Industries www.adafruit.com
  *  Led Strip Animations: https://www.tweaking4all.com/hardware/arduino/adruino-led-strip-effects/
  *  ESP8266 wifi based on examples by Nuno Santos: https://techtutorialsx.com
+ *  Brian L. https://www.youtube.com/user/witnessmenow
  *  
  *  License: This code is public domain. You can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published
  *  by the Free Software Foundation.  <http://www.gnu.org/licenses/>.
@@ -41,6 +42,11 @@ ESP8266WebServer server(80);
 
 // For LED animations that loop/cycle
 int LED_STATE = 0;
+
+// Timing Related to Colour
+uint16_t rainbowColor;
+unsigned long previousMillis = 0;
+const long interval = 20;
 
 void setup() {
   Serial.begin(115200);
@@ -121,10 +127,17 @@ void loop() {
     // Debug LED Staste: Serial.println(LED_STATE);
 
     switch(LED_STATE) {
-      case 3:
+      case 3: {
           strip.setBrightness(5); 
-          rainbow(20); // TODO: Causes the server to stop loading page, requires manually entering address to stop animating.
-          break;
+          
+          unsigned long currentMillis = millis();
+          
+            if(currentMillis - previousMillis >= interval) {
+              previousMillis = currentMillis;   
+               rainbow(20); 
+            }  
+            
+          break; }
       case 4:
           CylonBounce(0xff, 0, 0, 5, 10, 50);
           break;
@@ -147,66 +160,52 @@ void loop() {
 
 void handleRootPath() {           
   String content = "<html><head><title>Desk Light Strip</title></head>";
-  content += "<style>svg {fill:#000;}div a:hover svg { fill: #fff; }body{font-family:verdana,sans-serif;background-color: #000000; background-image: linear-gradient(6deg, #000000 0%, #3e3e3e 100%);}.footnote{color:#fff; font-size: 1.5em;}.power{display:flex; width: 100%; flex-wrap:wrap;}.controller{display:flex;width:100%;flex-wrap:wrap;margin-left:-5px;}a{display:block;width:49%;margin-left:10px;margin-bottom:10px;flex-grow:2;} a button{background-color: #6b6b6b;background-image: linear-gradient(6deg, #e2e2e2 0%, #ffffff 100%);font-weight:bold;font-size:1.75em;width:100%;height:25%;border:0px;border-radius: 15px;}button:hover{color:#fff; background-color: #caffff; background-image: linear-gradient(180deg, #caffff 0%, #93d8d8 100%);cursor:hand;}</style>";
+  content += "<style>svg {fill:#000;}div a:hover svg { fill: #fff; }body{font-family:verdana,sans-serif;background-color: #000000; background-image: linear-gradient(6deg, #000000 0%, #3e3e3e 100%);}.footnote{color:#fff; font-size: 1.5em;}.power{display:flex; width: 100%; flex-wrap:wrap;}.controller{display:flex;width:100%;flex-wrap:wrap;margin-left:-5px;}a{display:block;width:49%;margin-left:10px;margin-bottom:10px;flex-grow:2;} a button{background-color: #6b6b6b;background-image: linear-gradient(6deg, #e2e2e2 0%, #ffffff 100%);font-weight:bold;font-size:1.75em;width:100%;height:25%;border:0px;border-radius: 15px;}button:hover{color:#fff; background-color: #caffff; background-image: linear-gradient(180deg, #caffff 0%, #93d8d8 100%);cursor:hand;}";
+  content += " .on { background-color: #fbf5c0; background-image: linear-gradient(0deg, #fbf5c0 0%, #c3fcf8 50%, #ffffff 100%); }";
+  content += " .off { background-color: #212121; background-image: linear-gradient(135deg, #212121 0%, #7a7a7a 100%); color:#fff;}";
+  content += " .red { background-color: #af0002; background-image: linear-gradient(0deg, #af0002 0%, #FF2525 74%); }";
+  content += " .rainbow { background-color: #dc0003; background-image: linear-gradient(182deg, #dc0003 8%, #ff9600 22%, #9bb509 48%, #0dc5d0 66%, #e969ff 91%, #7200ff 100%); }";
+  content += " .cylon { background-color: #000000; background-image: linear-gradient(0deg, #000000 0%, #ff0002 50%, #000000 100%); }";
+  content += " .sparkle { background-color: #000000; background-image: linear-gradient(0deg, #000000 0%, #ffffff 30%, #535353 57%, #ffffff 77%, #000000 91%, #4a4a4a 100%); }";
+  content += " .fire { background-color: #af0002; background-image: linear-gradient(0deg, #af0002 0%, #FF2525 74%); }";
+  content += " .sunset { background-color: #FBAB7E; background-image: linear-gradient(322deg, #FBAB7E 0%, #F7CE68 100%); }</style>";
+
   content += "<body>";
 
   if (server.hasHeader("User-Agent")){
     content += "the user agent used is : " + server.header("User-Agent") + "<br><br>";
   }
 
-  // Style Buttons
-  switch(LED_STATE) {
-    case 0:
-      content += "<style>#on button{ background-color: #fbf5c0; background-image: linear-gradient(0deg, #fbf5c0 0%, #c3fcf8 50%, #ffffff 100%); }</style>";
-      break;
-    case 1:
-      content += "<style>#off button{ background-color: #212121; background-image: linear-gradient(135deg, #212121 0%, #7a7a7a 100%); color:#fff;}</style>";
-      break;
-    case 2:
-      content += "<style>#red {order:-1;}#red button{ background-color: #af0002; background-image: linear-gradient(0deg, #af0002 0%, #FF2525 74%); }</style>";
-      break;
-    case 3:
-      content += "<style>#rainbow {order:-1;}#rainbow button{ background-color: #dc0003; background-image: linear-gradient(182deg, #dc0003 8%, #ff9600 22%, #9bb509 48%, #0dc5d0 66%, #e969ff 91%, #7200ff 100%);";
-      break;
-    case 4:
-      content += "<style>#cylon {order:-1;}#cylon button{ background-color: #000000; background-image: linear-gradient(0deg, #000000 0%, #ff0002 50%, #000000 100%);</style>";
-      break;
-    case 5:
-      content += "<style>#sparkle {order:-1;}#sparkle button{background-color: #000000; background-image: linear-gradient(0deg, #000000 0%, #ffffff 30%, #535353 57%, #ffffff 77%, #000000 91%, #4a4a4a 100%);</style>";
-      break;
-    case 6:
-      content += "<style>#fire {order:-1;}#fire button{ background-color: #af0002; background-image: linear-gradient(0deg, #af0002 0%, #FF2525 74%); }</style>";
-      break;
-    case 7:
-      content += "<style>#sunset {order:-1;}#sunset button{ background-color: #FBAB7E; background-image: linear-gradient(322deg, #FBAB7E 0%, #F7CE68 100%); }</style>";
-      break;
-
-
-  }
 
   // Power DIV, Separate from the rest and static
   content += "<div class=\"power\">";
-  content += "<a href=\"/on\" id=\"on\" \"><button>";
+  content += "<a onclick='makeAjaxCall(\"/on\");addClass(document.getElementById(\"on\"),\"on\")'\"><button id=\"on\">";
   content += "<svg style=\"width:25%;height:25%\" viewBox=\"0 0 24 24\"><path d=\"M11,0V4H13V0H11M18.3,2.29L15.24,5.29L16.64,6.71L19.7,3.71L18.3,2.29M5.71,2.29L4.29,3.71L7.29,6.71L8.71,5.29L5.71,2.29M12,6A4,4 0 0,0 8,10V16H6V18H9V23H11V18H13V23H15V18H18V16H16V10A4,4 0 0,0 12,6M2,9V11H6V9H2M18,9V11H22V9H18Z\" /></svg>";
   content += "</button></a>";
-  content += "<a href=\"/off\" id=\"off\" \"><button>";
+  content += "<a onclick='makeAjaxCall(\"/off\");addClass(document.getElementById(\"off\"),\"off\")'\"><button id=\"off\">";
   content += "<svg style=\"width:25%;height:25%\" viewBox=\"0 0 24 24\"><path d=\"M12,3C10.05,3 8.43,4.4 8.08,6.25L16.82,15H18V13H16V7A4,4 0 0,0 12,3M3.28,4L2,5.27L8,11.27V13H6V15H9V21H11V15H11.73L13,16.27V21H15V18.27L18.73,22L20,20.72L15,15.72L8,8.72L3.28,4Z\" /></svg>";
   content += "</button></a>";
   content += "</div>";
 
   // Controller DIV, shifts button order when active
   content += "<div class=\"controller\">";
-  content += "<a href=\"/red\" id=\"red\" \"><button>Red </button></a>";
-  content += "<a href=\"/sparkle\" id=\"sparkle\" \"><button>Sparkle </button></a>";
-  content += "<a href=\"/cylon\" id=\"cylon\" \"><button>Cylon </button></a>";
-  content += "<a href=\"/fire\" id=\"fire\" \"><button>Fire </button></a>";
-  content += "<a href=\"/sunset\" id=\"sunset\" \"><button>Sunset </button></a>";
-  content += "<a href=\"/rainbow\" id=\"rainbow\" \"><button>Rainbow <sup>**</sup> </button></a>";
+  content += "<a onclick='makeAjaxCall(\"/red\");addClass(document.getElementById(\"red\"),\"red\")'\"><button id=\"red\">Red</button></a>";
+  content += "<a onclick='makeAjaxCall(\"/sparkle\");addClass(document.getElementById(\"sparkle\"),\"sparkle\")'\"><button id=\"sparkle\">Sparkle</button></a>";
+  content += "<a onclick='makeAjaxCall(\"/cylon\");addClass(document.getElementById(\"cylon\"),\"cylon\")'\"><button id=\"cylon\">Cylon</button></a>";
+  content += "<a onclick='makeAjaxCall(\"/fire\");addClass(document.getElementById(\"fire\"),\"fire\")'\"><button id=\"fire\">Fire</button></a>";
+  content += "<a onclick='makeAjaxCall(\"/sunset\");addClass(document.getElementById(\"sunset\"),\"sunset\")'\"><button id=\"sunset\">Sunset</button></a>";
+  content += "<a onclick='makeAjaxCall(\"/rainbow\");addClass(document.getElementById(\"rainbow\"),\"rainbow\")'\"><button id=\"rainbow\">Rainbow</button></a>";
+  content += "</div>";
+  
+  // Footnote
+  content += "<div class=\"footnote\"><sup>The End</sup>";
   content += "</div>";
 
-  // Footnote
-  content += "<div class=\"footnote\"><sup>** Currently buggy. Works but you'll have to manually enter IPADDRESS/off to turn it off.</sup>";
-  content += "</div>";
+  // JS for ajax request
+  content += "<script type=\"text/javascript\">function makeAjaxCall(e){var t=new XMLHttpRequest;t.onreadystatechange=function(){t.readyState==XMLHttpRequest.DONE&&(200==t.status?console.log(\"response form Ajax\"):400==t.status?alert(\"There was an error 400\"):alert(\"something else other than 200 was returned\"))},t.open(\"GET\",e,!0),t.send()}";
+  content += "function addClass(t,s){var a=t.getAttribute(\"class\");void 0!==a&&a?t.setAttribute(\"class\",a+\" \"+s):t.setAttribute(\"class\",s)}";
+  content += "function removeClass(e,t){var s=e.getAttribute(\"class\");if(void 0!==s&&s){var r=s.indexOf(t);if(-1!=r){var i=s.substr(r,t.length),a=s.replace(i,\"\").trim();e.setAttribute(\"class\",a)}}else e.removeAttribute(\"class\")}";
+  content += "</script>";
   
   content += "</body></html>";
   server.send(200, "text/html", content);
@@ -308,18 +307,19 @@ void colorWipe(uint32_t c, uint8_t wait) {
 }
 
 
+// Modified to work with better timing
 void rainbow(uint8_t wait) {
-  uint16_t i, j;
+  uint16_t i;
 
-  for(j=0; j<256; j++) {
-    for(i=0; i<strip.numPixels(); i++) {
-      strip.setPixelColor(i, Wheel((i+j) & 255));
-    }
-    strip.show();
-    delay(wait);
-  }
+   for(i=0; i<strip.numPixels(); i++) {
+     strip.setPixelColor(i, Wheel((i+rainbowColor) & 255));
+   }
+   strip.show();
+   rainbowColor++;
+   if(rainbowColor > 255) {
+        rainbowColor = 0;
+   }
 }
-
 
 // Slightly different, this makes the rainbow equally distributed throughout
 void rainbowCycle(uint8_t wait) {
