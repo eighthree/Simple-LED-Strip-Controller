@@ -1,8 +1,9 @@
-# Simple LED Strip Controller 1.1.1
+# Simple LED Strip Controller 1.2.0
 
-* Control a LED light strip via a web browser.
-* Allow configuration of device wifi settings via AP
-* Serves a light browser-based controller with simple CSS for functionality
+*  Control an LED light strip via a web browser
+*  Allow configuration of device wifi settings via AP
+*  Serves a light browser-based controller with simple CSS for functionality
+*  Hardware mode switch between colour settings
 
 **[Status](#status)** |
 **[Hardware Used](#hardware-used)** |
