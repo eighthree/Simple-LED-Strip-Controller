@@ -1,12 +1,12 @@
-/*  Simple LED Strip Controller 1.1.1 */
-/*  
+/*  Simple LED Strip Controller 1.2.0
  *  Author: Timothy Garcia (http://timothygarcia.ca)
  *  Date: September 2017
  *  
  *  Description:
- *  Control a LED light strip via a web browser
+ *  Control an LED light strip via a web browser
  *  Allow configuration of device wifi settings via AP
  *  Serves a light browser-based controller with simple CSS for functionality
+ *  Hardware mode switch between colour settings
  *  
  *  Hardware Used:
  *  NodeMCU 1.0 / 10K Ohm Resistor / 470 Ohm Resistor / Momentary Switch / Protoype Board / 3-pin header (for LED)
@@ -15,6 +15,7 @@
  *  Adafruit Industries www.adafruit.com
  *  Led Strip Animations: https://www.tweaking4all.com/hardware/arduino/adruino-led-strip-effects/
  *  ESP8266 wifi based on examples by Nuno Santos: https://techtutorialsx.com
+ *  LadyAda www.ladyada.net/learn/arduino/lesson5.html
  *  Brian L. https://www.youtube.com/user/witnessmenow
  *  Embedded Icons: https://material.io/icons/
  *  
@@ -33,33 +34,36 @@
 // Neopixel Setup
 #define PIN D6
 #define NUM_LEDS 29
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
 
-// Placeholder Trigger Pin
-#define TRIGGER_PIN D1
+// DRD Setup
+#define DRD_TIMEOUT 10          // Number of seconds after reset during which a subseqent reset will be considered a double reset.
+#define DRD_ADDRESS 0           // RTC Memory Address for the DoubleResetDetector to use
 
-// Number of seconds after reset during which a 
-// subseqent reset will be considered a double reset.
-#define DRD_TIMEOUT 10
+// AP Setup
+#define PORTAL_AP_NAME "VULPEioNMCU1"     // Set Portal Name
 
-// RTC Memory Address for the DoubleResetDetector to use
-#define DRD_ADDRESS 0
-DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
-
-#define PORTAL_AP_NAME "VULPEioNMCU1"
-
-// ESP8266 Web Server Port: Default 80
-ESP8266WebServer server(80);
+// Mode Switch Setup
+uint8_t TRIGGER_PIN = D1;           // Placeholder Trigger Pin
+uint8_t val;                        // variable for reading the pin status
+uint8_t val2;                       // variable for reading the delayed status
+uint8_t buttonState;                // variable to hold the button state
 
 // For LED animations that loop/cycle
-int LED_STATE = 0;
+uint8_t LED_STATE = 0;
+
+char* LED_MODES[] ={"off","on","red","rainbow","cylon","sparkle","fire","sunset","theatre","blue","green","purple"};
 
 // Timing Related to Colour
 uint16_t rainbowColor;
 unsigned long previousMillis = 0;
 const long interval = 20;
 
+// Initialise Neopixels, HTTP Server & DRD Reset Detector
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
+ESP8266WebServer server(80);      // ESP8266 Web Server Port: Default 80
+DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
 
+// Callback for AP Setup
 void configModeCallback (WiFiManager *myWiFiManager) {
   Serial.println("Entered config mode");
   Serial.println(WiFi.softAPIP());
@@ -69,69 +73,72 @@ void configModeCallback (WiFiManager *myWiFiManager) {
   strip.show();
   drd.stop();
 }
-
 void setup() {
-  Serial.begin(115200);
-  Serial.println("\n Starting");
+  //Serial.begin(115200);
+  //Serial.println("\n Starting");
 
   pinMode(TRIGGER_PIN, INPUT);
   pinMode(LED_BUILTIN, OUTPUT);
+  
+  strip.begin();              // Start neopixels
+  strip.setBrightness(5);     // Set brightness for strip to 5, prevents drawing too much power.
+  strip.show();               // Initialize all pixels to 'off'
 
-  // Set brightness for strip to 5, prevents drawing too much power.
-  strip.begin();
-  strip.setBrightness(5);
-  strip.show(); // Initialize all pixels to 'off'
-
-  // Check for double reset flag on setup
-  if (drd.detectDoubleReset()) {
-
-    Serial.println("Double Reset Detected");
-    digitalWrite(LED_BUILTIN, LOW);
+  
+  if (drd.detectDoubleReset()) { // Check for double reset flag on setup
+      //Serial.println("Double Reset Detected");
     
-    Serial.println("\n Configuration Portal Requested, Control Server Stopping");
-
-    // Stop serving port 80
-    server.stop();
+      digitalWrite(LED_BUILTIN, LOW);
     
-    //WiFiManager
-    //Local intialization. Once its business is done, there is no need to keep it around
-    WiFiManager wifiManager;
-    wifiManager.setAPCallback(configModeCallback);
+      //Serial.println("\n Configuration Portal Requested, Control Server Stopping");
 
-    //sets timeout until configuration portal gets turned off
-    //useful to make it all retry or go to sleep
-    //in seconds
-    wifiManager.setTimeout(120);
+      // Stop serving port 80
+      server.stop();
     
-    //WITHOUT THIS THE AP DOES NOT SEEM TO WORK PROPERLY WITH SDK 1.5 , update to at least 1.5.1
-    WiFi.mode(WIFI_STA);
+      //WiFiManager
+      //Local intialization. Once its business is done, there is no need to keep it around
+      WiFiManager wifiManager;
+      wifiManager.setAPCallback(configModeCallback);
+
+      //sets timeout until configuration portal gets turned off
+      //useful to make it all retry or go to sleep
+      //in seconds
+      wifiManager.setTimeout(120);
     
-    if (!wifiManager.startConfigPortal(PORTAL_AP_NAME)) {
-      Serial.println("Failed to connect and hit timeout");
-      delay(3000);
-      //reset and try again, or maybe put it to deep sleep
-      ESP.reset();
-      delay(5000);
-    }
+      //WITHOUT THIS THE AP DOES NOT SEEM TO WORK PROPERLY WITH SDK 1.5 , update to at least 1.5.1
+      WiFi.mode(WIFI_STA);
+    
+      if (!wifiManager.startConfigPortal(PORTAL_AP_NAME)) {
+        Serial.println("Failed to connect and hit timeout");
+        delay(3000);
+        //reset and try again, or maybe put it to deep sleep
+        ESP.reset();
+        delay(5000);
+      }
 
-    // If you get here you have connected to the WiFi
-    Serial.println("Connected to Wireless AP.");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());  //Print the local IP
+      //Serial.println("Connected to Wireless AP.");  // If you get here you have connected to the WiFi
+      //Serial.println("IP address: ");
+      //Serial.println(WiFi.localIP());               //Print the local IP
 
-    // Restart Server
-    server.begin();
+      // Restart Server
+      server.begin();
   } else {
-    Serial.println("No Double Reset Detected");
+      //Serial.println("No Double Reset Detected");
   }
 
   server.begin();  //Start the server
-  Serial.println("Server listening");
+  //Serial.println("Server listening");
+  
+  buttonState = digitalRead(TRIGGER_PIN);
+  //Serial.println("Current button state on startup:");
+  //Serial.println(buttonState);
 
   colorWipe(strip.Color(100, 100, 100), 50); // Set strip colour to white
 
   //Associate the handler function to the path
-  server.on("/", handleRootPath);      
+  server.on("/", [](){
+    handleRootPath(LED_STATE);
+  });   
   server.on("/on", ledON);
   server.on("/off", ledOFF);
   server.on("/rainbow", rainbowLight);
@@ -144,13 +151,91 @@ void setup() {
   server.on("/blue", blueLight);
   server.on("/green", greenLight);
   server.on("/purple", purpleLight);
+  
 }
 
 
 void loop() {
-    // Debug LED Staste: Serial.println(LED_STATE);
+
+    // Mode Switcher
+    // Based on Lady Ada's bike lights
+    val = digitalRead(TRIGGER_PIN);      // read input value and store it in val
+    delay(10);                         // 10 milliseconds is a good amount of time
+    val2 = digitalRead(TRIGGER_PIN);     // read the input again to check for bounces
+    
+    if (val == val2) {                 // make sure we got 2 consistant readings!
+      if (val != buttonState) {          // the button state has changed!
+        if (val == HIGH) {                // check if the button is pressed
+
+            switch(LED_STATE) {
+              case 0:
+                ledON();
+                break;
+              case 1:
+                redLight();
+                break;
+              case 2:
+                LED_STATE += 1;
+                break;
+              case 3:
+                rainbowLight();
+                LED_STATE += 1;
+                break;
+              case 4:
+                cylonLight();
+                LED_STATE += 1;
+                break;
+              case 5:
+                sparkleLight();
+                LED_STATE += 1;
+                break;
+              case 6:
+                fireLight();
+                LED_STATE += 1;
+                break;
+              case 7: {
+                sunsetLight(); 
+                LED_STATE += 1;
+                break; }
+              case 8:
+                theatreLight();
+                LED_STATE += 1;
+                break;
+              case 9:
+                blueLight();
+                LED_STATE += 1;
+                break;
+              case 10:
+                greenLight();
+                LED_STATE += 1;
+                break;
+              case 11:
+                purpleLight();
+                LED_STATE = 0;
+                break;
+             } // End Switch
+             
+          }
+        }
+      }
+   
+   buttonState = val;                 // save the new state in our variable
+    
+    // Debug Button State
+    //Serial.println(buttonState);
+    //Serial.println(LED_STATE);
 
     switch(LED_STATE) {
+      case 1: {
+          strip.setBrightness(10);
+          colorWipe(strip.Color(100,100,100), 50);
+          break;
+      }
+      case 2: {
+          strip.setBrightness(5);
+          colorWipe(strip.Color(255, 0, 0), 50);
+          break;
+      }
       case 3: {
           unsigned long currentMillis = millis();
             if(currentMillis - previousMillis >= interval) {
@@ -167,9 +252,35 @@ void loop() {
       case 6:
           Fire(55,120,15);
           break;
-      case 8:
+      case 7: {
+          strip.setBrightness(8);
+          colorWipe(strip.Color(255, 108, 0), 50);
+           break;
+      }
+      case 8: {
           theaterChase(strip.Color(127, 127, 127), 50);
           break;
+      }
+      case 9: {
+          strip.setBrightness(15);
+          colorWipe(strip.Color(0, 0, 255), 50);
+           break;
+      }
+      case 10: {
+          strip.setBrightness(20);
+          colorWipe(strip.Color(0, 255, 0), 50);
+           break;
+      }
+      case 11: {
+          strip.setBrightness(20);
+          colorWipe(strip.Color(80, 0, 200), 50);
+          break;
+      }
+      case 0: {
+          strip.setBrightness(5);
+          colorWipe(strip.Color(0, 0, 0), 50);
+          break;
+      }
     }
     
     server.handleClient();  
@@ -179,12 +290,12 @@ void loop() {
     // You can also call drd.stop() when you wish to no longer
     // consider the next reset as a double reset.
     drd.loop();
- 
+
 }
 
 
 // Server Control Paths
-void handleRootPath() {           
+void handleRootPath(uint8_t activeButton) {           
   String content = "<html><head><title>Desk Light Strip</title>"; 
   
   // Base 64 encoded favicon
@@ -192,22 +303,19 @@ void handleRootPath() {
   content += "</head>";
 
   // Stylesheet
-  content += "<style type=\"text/css\">body{font-family:verdana,sans-serif;background-color: #000000; background-image: linear-gradient(6deg, #000000 0%, #3e3e3e 100%);}.footnote{color:#fff; font-size: 1em;}svg {fill:#000;}div a:hover svg { fill: #fff; }.power{display:flex; width: 100%; flex-wrap:wrap; margin-left:-5px;}.controller{display:flex;width:100%;flex-wrap:wrap;margin-left:-5px;}a{display:block;width:49%;margin-left:10px;margin-bottom:10px;flex-grow:2;} a button{background-color: #6b6b6b;background-image: linear-gradient(6deg, #e2e2e2 0%, #ffffff 100%);font-weight:bold;font-size:3em;width:100%;height:25%;border:0px;border-radius: 15px;}button:hover{color:#fff; background-color: #caffff; background-image: linear-gradient(180deg, #caffff 0%, #93d8d8 100%);cursor:hand;}";
-  content += " .on { background-color: #ffcd6a; background-image: linear-gradient(0deg, #ffcd6a 0%, #fffcde 100%); }";
-  content += " .off { background-color: #212121; background-image: linear-gradient(135deg, #212121 0%, #7a7a7a 100%); color:#fff;}";
-  content += " .red { background-color: #ff5959; background-image: linear-gradient(45deg, #ff5959 0%, #bb0003 100%); }";
-  content += " .blue { background-color: #21D4FD; background-image: linear-gradient(19deg, #21D4FD 0%, #7021ff 100%); }";
-  content += " .green { background-color: #7cc000; background-image: linear-gradient(19deg, #7cc000 0%, #00bd5d 100%); }";
-  content += " .purple { background-color: #5f03d2; background-image: linear-gradient(19deg, #5f03d2 0%, #B721FF 100%); }";
-  content += " .rainbow { background-color: #fd4000; background-image: linear-gradient(0deg, #fd4000 0%, #fdd90a 27%, #2AF598 51%, #00e9e7 71%, #718bef 100%); }";
-  content += " .cylon { background-color: #000000; background-image: linear-gradient(0deg, #000000 0%, #ff0002 50%, #000000 100%); }";
-  content += " .sparkle { background-color: #ffffff; background-image: linear-gradient(155deg, #ffffff 0%, #DDD6F3 36%, #ffffff 66%, #FAACA8 100%); }";
-  content += " .fire { background-color: #af0002; background-image: linear-gradient(4deg, #af0002 0%, #FF2525 14%, #f7bc49 39%, #ffffff 60%, #ffffff 80%, #ffe0e0 100%); }";
-  content += " .sunset { background-color: #FBAB7E; background-image: linear-gradient(322deg, #FBAB7E 0%, #F7CE68 100%); }";
-  content += " .theatre { background-color: #ffdb00; background-image: linear-gradient(123deg, #ffdb00 0%, #ff0000 56%, #000000 100%); }</style>";
-
-
-
+  content += "<style type=\"text/css\">body{font-family:verdana,sans-serif;background-color: #000000; background-image: linear-gradient(6deg, #000000 0%, #3e3e3e 100%);}.footnote{color:#fff; font-size: 1em;}svg {fill:#000;}div a:hover svg { fill: #fff; }a:active,a:focus, {outline:0;border:none;-moz-outline-style: none; }.power{display:flex; width: 100%; flex-wrap:wrap; margin-left:-5px;}.controller{display:flex;width:100%;flex-wrap:wrap;margin-left:-5px;}a{display:block;width:49%;margin-left:10px;margin-bottom:10px;flex-grow:2;}a button {transition: all 1s ease;} input[type=\"button\"]{ outline:none; } input[type=\"button\"]::-moz-focus-inner { border: 0; } a button:hover,a button:active {-webkit-box-shadow: 0px 0px 20px 0px rgba(255,255,255,1);-moz-box-shadow: 0px 0px 20px 0px rgba(255,255,255,1);box-shadow: 0px 0px 20px 0px rgba(255,255,255,1);} a button{ text-transform: capitalize; background-color: #6b6b6b;background-image: linear-gradient(6deg, #e2e2e2 0%, #ffffff 100%);font-weight:bold;font-size:3em;width:100%;height:25%;border:0px;border-radius: 15px;}button:hover{color:#fff; background-color: #caffff; background-image: linear-gradient(180deg, #caffff 0%, #93d8d8 100%);cursor:hand;}";
+  content += "#on:active, #on:hover, .on { color:#fff; background-color: #ffcd6a; background-image: linear-gradient(0deg, #ffcd6a 0%, #fffcde 100%); }";
+  content += "#off:active, #off:hover, .off { color:#fff; background-color: #212121; background-image: linear-gradient(135deg, #212121 0%, #7a7a7a 100%); color:#fff;}";
+  content += "#red:active, #red:hover, .red { color:#fff; background-color: #ff5959; background-image: linear-gradient(45deg, #ff5959 0%, #bb0003 100%); }";
+  content += "#blue:active, #blue:hover, .blue { color:#fff; background-color: #21D4FD; background-image: linear-gradient(19deg, #21D4FD 0%, #7021ff 100%); }";
+  content += "#green:active, #green:hover, .green { color:#fff; background-color: #7cc000; background-image: linear-gradient(19deg, #7cc000 0%, #00bd5d 100%); }";
+  content += "#purple:active, #purple:hover, .purple { color:#fff; background-color: #5f03d2; background-image: linear-gradient(19deg, #5f03d2 0%, #B721FF 100%); }";
+  content += "#rainbow:active, #rainbow:hover, .rainbow { color:#fff; background-color: #fd4000; background-image: linear-gradient(0deg, #fd4000 0%, #fdd90a 27%, #2AF598 51%, #00e9e7 71%, #718bef 100%); }";
+  content += "#cylon:active, #cylon:hover, .cylon { color:#fff; background-color: #5b0000; background-image: linear-gradient(90deg, #5b0000 0%, #ff0004 50%, #5f0000 100%); }";
+  content += "#sparkle:active, #sparkle:hover, .sparkle { color:#fff; background-color: #6f6f6f; background-image: linear-gradient(19deg, #6f6f6f 0%, #ffffff 100%); }";
+  content += "#fire:active, #fire:hover, .fire { color:#fff; background-color: #fff8f8; background-image: linear-gradient(147deg, #fff8f8 0%, #FFE53B 23%, #FF2525 100%); }";
+  content += "#sunset:active, #sunset:hover, .sunset { color:#fff; background-color: #FBAB7E; background-image: linear-gradient(322deg, #FBAB7E 0%, #F7CE68 100%); }";
+  content += "#theatre:active, #theatre:hover, .theatre { color:#fff; background-color: #960000; background-image: linear-gradient(180deg, #960000 19%, #ff0000 79%, #000000 100%); }</style>";
   content += "<body>";
 
   if (server.hasHeader("User-Agent")){
@@ -215,31 +323,42 @@ void handleRootPath() {
   }
 
   // Power DIV, Separate from the rest and static
+  // We want to keep the power related buttons static so they're
+  // in a separate div
   content += "<div class=\"power\">";
-  content += "<a onclick='makeAjaxCall(\"/on\")'\"><button id=\"on\">";
+  if(activeButton == 1) {
+    content += "<a onclick='makeAjaxCall(\"/" + String(LED_MODES[1]) +  "\")'\"><button class=\"" + String(LED_MODES[1]) + "\" id=\"" + String(LED_MODES[1]) +  "\">";
+  } else {
+    content += "<a onclick='makeAjaxCall(\"/" + String(LED_MODES[1]) +  "\")'\"><button id=\"" + String(LED_MODES[1]) +  "\">";
+  }
   content += "<svg style=\"width:25%;height:25%\" viewBox=\"0 0 24 24\"><path d=\"M11,0V4H13V0H11M18.3,2.29L15.24,5.29L16.64,6.71L19.7,3.71L18.3,2.29M5.71,2.29L4.29,3.71L7.29,6.71L8.71,5.29L5.71,2.29M12,6A4,4 0 0,0 8,10V16H6V18H9V23H11V18H13V23H15V18H18V16H16V10A4,4 0 0,0 12,6M2,9V11H6V9H2M18,9V11H22V9H18Z\" /></svg>";
   content += "</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/off\")'\"><button id=\"off\">";
+
+  if(activeButton == 0) {
+    content += "<a onclick='makeAjaxCall(\"/" + String(LED_MODES[0]) +  "\")'\"><button class=\"" + String(LED_MODES[0]) + "\" id=\"" + String(LED_MODES[0]) +  "\">";
+  } else {
+    content += "<a onclick='makeAjaxCall(\"/" + String(LED_MODES[0]) +  "\")'\"><button id=\"" + String(LED_MODES[0]) +  "\">";
+  }
   content += "<svg style=\"width:25%;height:25%\" viewBox=\"0 0 24 24\"><path d=\"M12,3C10.05,3 8.43,4.4 8.08,6.25L16.82,15H18V13H16V7A4,4 0 0,0 12,3M3.28,4L2,5.27L8,11.27V13H6V15H9V21H11V15H11.73L13,16.27V21H15V18.27L18.73,22L20,20.72L15,15.72L8,8.72L3.28,4Z\" /></svg>";
   content += "</button></a>";
   content += "</div>";
 
   // Controller DIV
   content += "<div class=\"controller\">";
-  content += "<a onclick='makeAjaxCall(\"/red\")'\"><button id=\"red\">Red</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/green\")'\"><button id=\"green\">Green</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/blue\")'\"><button id=\"blue\">Blue</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/purple\")'\"><button id=\"purple\">Purple</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/sparkle\")'\"><button id=\"sparkle\">Sparkle</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/cylon\")'\"><button id=\"cylon\">Cylon</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/fire\")'\"><button id=\"fire\">Fire</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/sunset\")'\"><button id=\"sunset\">Sunset</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/theatre\")'\"><button id=\"theatre\">Theatre</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/rainbow\")'\"><button id=\"rainbow\">Rainbow</button></a>";
+
+  // Create buttons dynamically and add a 'class'
+  // This reflects the current LED_STATE, as named in LED_MODE
+  for(uint8_t i = 2; i <= 11; i++) {
+    if(activeButton == i) {
+      content += "<a onclick='makeAjaxCall(\"/" + String(LED_MODES[i]) +  "\")'\"><button class=\"" + String(LED_MODES[i]) + "\" id=\"" + String(LED_MODES[i]) +  "\">" + String(LED_MODES[i]) +  "</button></a>";
+    } else {
+      content += "<a onclick='makeAjaxCall(\"/" + String(LED_MODES[i]) +  "\")'\"><button id=\"" + String(LED_MODES[i]) +  "\">" + String(LED_MODES[i]) +  "</button></a>";
+    }
+  } 
   content += "</div>";
   
   // Footnote
-  content += "<div class=\"footnote\">&nbsp; Simple LED Strip Controller Version 1.1.1 <br/><a href=\"https://github.com/eighthree/Simple-LED-Strip-Controller\" target=\"_new\">View Project on Github</a><br/></div>";
+  content += "<div class=\"footnote\">&nbsp; Simple LED Strip Controller Version 1.2.0 <br/><a href=\"https://github.com/eighthree/Simple-LED-Strip-Controller\" target=\"_new\">View Project on Github</a><br/></div>";
 
   // JS for ajax request & button toggles
   content += "<script type=\"text/javascript\">function makeAjaxCall(e){var t=new XMLHttpRequest;t.onreadystatechange=function(){t.readyState==XMLHttpRequest.DONE&&(200==t.status?console.log(\"response form Ajax\"):400==t.status?alert(\"There was an error 400\"):alert(\"something else other than 200 was returned\"))},t.open(\"GET\",e,!0),t.send()}";
@@ -248,84 +367,73 @@ void handleRootPath() {
 
   content += "</body></html>";
   server.send(200, "text/html", content);
+}
 
+// Set LED State
+// Things that should happen before/after the variable is modified
+// should occur here.
+void ledOFF(){
+  handleRootPath(LED_STATE);  // Refresh the root page + pass the LED state for CSS changes
+  LED_STATE = 0;              // Change LED State
 }
 
 void ledON(){
-  LED_STATE = 0;
-  strip.setBrightness(10);
-  colorWipe(strip.Color(100,100,100), 50);
-  handleRootPath();
-}
-
-void ledOFF(){
+  handleRootPath(LED_STATE);
   LED_STATE = 1;
-  strip.setBrightness(5);
-  colorWipe(strip.Color(0, 0, 0), 50);
-    handleRootPath();
 }
 
 void redLight(){
+  handleRootPath(LED_STATE); 
   LED_STATE = 2;
-  strip.setBrightness(5);
-  colorWipe(strip.Color(255, 0, 0), 50);
-  handleRootPath(); 
 }
 
 void rainbowLight(){
+  handleRootPath(LED_STATE);
   LED_STATE = 3;
-  handleRootPath();
 }
 
 void cylonLight(){
+  handleRootPath(LED_STATE);
   LED_STATE = 4;
-  handleRootPath();
 }
 
 void sparkleLight(){
+  handleRootPath(LED_STATE);
   LED_STATE = 5;
-  handleRootPath();
 }
 
 void fireLight(){
+  handleRootPath(LED_STATE);
   LED_STATE = 6;
-  handleRootPath();
 }
 
 void sunsetLight(){
+  handleRootPath(LED_STATE); 
   LED_STATE = 7;
-  strip.setBrightness(8);
-  colorWipe(strip.Color(255, 108, 0), 50);
-  handleRootPath(); 
 }
 
 void theatreLight(){
+  handleRootPath(LED_STATE);
   LED_STATE = 8;
-  handleRootPath();
 }
 
 void blueLight() {
-  LED_STATE = 9;
-  strip.setBrightness(15);
-  colorWipe(strip.Color(0, 0, 255), 50);
-  handleRootPath(); 
+  handleRootPath(LED_STATE);
+  LED_STATE = 9; 
 }
 
 void greenLight() {
+  handleRootPath(LED_STATE); 
   LED_STATE = 10;
-  strip.setBrightness(20);
-  colorWipe(strip.Color(0, 255, 0), 50);
-  handleRootPath(); 
 }
 
 void purpleLight() {
+  handleRootPath(LED_STATE); 
   LED_STATE = 11;
-  strip.setBrightness(20);
-  colorWipe(strip.Color(80, 0, 200), 50);
-  handleRootPath(); 
 }
 
 // LED Animations & Control
+// You may use the FastLED library with the following animations
 void showStrip() {
  #ifdef ADAFRUIT_NEOPIXEL_H 
    // NeoPixel
@@ -541,4 +649,3 @@ void SnowSparkle(byte red, byte green, byte blue, int SparkleDelay, int SpeedDel
   showStrip();
   delay(SpeedDelay);
 }
-
