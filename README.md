@@ -16,24 +16,27 @@ This project is in progress.
 
 ## Hardware Used
 #### Requirements
-* 1x NodeMCU 1.0 (ESP8266) *
-* 1x WS2812b/SK6812 LED Strip or "Neopixel" LED Strip
+* 1x NodeMCU 1.0 (ESP8266) _*_
+* 1x WS2812b/SK6812 LED Strip or "_Neopixel_" LED Strip
 
-_*You can use any Wifi-capable Arduino, your mileage may vary_
+_* You can use any Wifi-capable Arduino, your mileage may vary_
 
 ## Optional
 * 1x 10k Ω resistor
 * 1x 470 Ω resistor
+* 1x Momentary Switch (for switching modes)
 * 1x 3-pin male header (for LED connections)
 
 ## Libraries
 * ESP8266WiFi, https://github.com/esp8266/Arduino
 * DNSServer, https://github.com/esp8266/Arduino/tree/master/libraries/DNSServer
 * WiFiManager, https://github.com/tzapu/WiFiManager
-* Adafruit_NeoPixel.h, https://github.com/adafruit/Adafruit_NeoPixel
+* Adafruit_NeoPixel.h, https://github.com/adafruit/Adafruit_NeoPixel _*_
 * ESP8266WebServer.h, https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
 * DoubleResetDetector.h>, https://github.com/datacute/DoubleResetDetector/
 * Google Material Icons, https://material.io/icons/
+
+_* FastLED should work as well but is not tested._
 
 ## License
 This code is public domain. You can redistribute it and/or modify it under the terms of the
