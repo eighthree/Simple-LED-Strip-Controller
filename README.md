@@ -5,6 +5,8 @@
 *  Serves a light browser-based controller with simple CSS for functionality
 *  Hardware mode switch between colour settings
 
+![led-control-panel](https://user-images.githubusercontent.com/1100950/30188844-a25f4af6-93e5-11e7-91b9-a2b1629a84f0.PNG)
+
 **[Status](#status)** |
 **[Hardware Used](#hardware-used)** |
 **[Libraries](#libraries)** |
@@ -21,7 +23,7 @@ This project is in progress.
 
 _* You can use any Wifi-capable Arduino, your mileage may vary_
 
-## Optional
+#### Optional Components
 * 1x 10k Ω resistor
 * 1x 470 Ω resistor
 * 1x Momentary Switch (for switching modes)
