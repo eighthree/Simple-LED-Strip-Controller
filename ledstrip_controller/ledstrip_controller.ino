@@ -16,6 +16,7 @@
  *  Led Strip Animations: https://www.tweaking4all.com/hardware/arduino/adruino-led-strip-effects/
  *  ESP8266 wifi based on examples by Nuno Santos: https://techtutorialsx.com
  *  Brian L. https://www.youtube.com/user/witnessmenow
+ *  Embedded Icons: https://material.io/icons/
  *  
  *  License: This code is public domain. You can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published
  *  by the Free Software Foundation.  <http://www.gnu.org/licenses/>.
@@ -27,14 +28,24 @@
 #include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
 #include <Adafruit_NeoPixel.h>    //https://github.com/adafruit/Adafruit_NeoPixel
 #include <ESP8266WebServer.h>     //https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
+#include <DoubleResetDetector.h>  //https://github.com/datacute/DoubleResetDetector/
 
 // Neopixel Setup
 #define PIN D6
 #define NUM_LEDS 29
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
 
-// Trigger Configuration Portal: Default D1
+// Placeholder Trigger Pin
 #define TRIGGER_PIN D1
+
+// Number of seconds after reset during which a 
+// subseqent reset will be considered a double reset.
+#define DRD_TIMEOUT 10
+
+// RTC Memory Address for the DoubleResetDetector to use
+#define DRD_ADDRESS 0
+DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
+
 #define PORTAL_AP_NAME "VULPEioNMCU1"
 
 // ESP8266 Web Server Port: Default 80
@@ -48,46 +59,35 @@ uint16_t rainbowColor;
 unsigned long previousMillis = 0;
 const long interval = 20;
 
+
+void configModeCallback (WiFiManager *myWiFiManager) {
+  Serial.println("Entered config mode");
+  Serial.println(WiFi.softAPIP());
+  strip.setPixelColor(0, strip.Color(100, 0, 0));
+  strip.setPixelColor(1, strip.Color(0, 200, 0));
+  strip.setPixelColor(2, strip.Color(100, 0, 200));
+  strip.show();
+  drd.stop();
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.println("\n Starting");
 
   pinMode(TRIGGER_PIN, INPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
 
   // Set brightness for strip to 5, prevents drawing too much power.
   strip.begin();
   strip.setBrightness(5);
   strip.show(); // Initialize all pixels to 'off'
 
- // Wait for connection
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.println("Waiting to connect…");
-  }
+  // Check for double reset flag on setup
+  if (drd.detectDoubleReset()) {
 
-  server.begin();  //Start the server
-  Serial.println("Server listening");
-
-  colorWipe(strip.Color(100, 100, 100), 50); // Set strip colour to white
-
-  //Associate the handler function to the path
-  server.on("/", handleRootPath);      
-  server.on("/on", ledON);
-  server.on("/off", ledOFF);
-  server.on("/rainbow", rainbowLight);
-  server.on("/red", redLight);
-  server.on("/cylon", cylonLight);
-  server.on("/sparkle", sparkleLight);
-  server.on("/fire", fireLight);
-  server.on("/sunset", sunsetLight);
-  
-}
-
-
-void loop() {
-  
-  // Check if configuration portal requested.
-  if ( digitalRead(TRIGGER_PIN) == HIGH ) {
+    Serial.println("Double Reset Detected");
+    digitalWrite(LED_BUILTIN, LOW);
+    
     Serial.println("\n Configuration Portal Requested, Control Server Stopping");
 
     // Stop serving port 80
@@ -96,6 +96,7 @@ void loop() {
     //WiFiManager
     //Local intialization. Once its business is done, there is no need to keep it around
     WiFiManager wifiManager;
+    wifiManager.setAPCallback(configModeCallback);
 
     //sets timeout until configuration portal gets turned off
     //useful to make it all retry or go to sleep
@@ -120,23 +121,42 @@ void loop() {
 
     // Restart Server
     server.begin();
-    
   } else {
-     
-    // put your main code here, to run repeatedly:
+    Serial.println("No Double Reset Detected");
+  }
+
+  server.begin();  //Start the server
+  Serial.println("Server listening");
+
+  colorWipe(strip.Color(100, 100, 100), 50); // Set strip colour to white
+
+  //Associate the handler function to the path
+  server.on("/", handleRootPath);      
+  server.on("/on", ledON);
+  server.on("/off", ledOFF);
+  server.on("/rainbow", rainbowLight);
+  server.on("/red", redLight);
+  server.on("/cylon", cylonLight);
+  server.on("/sparkle", sparkleLight);
+  server.on("/fire", fireLight);
+  server.on("/sunset", sunsetLight);
+  
+}
+
+
+void loop() {
+  drd.loop();
+
+    
     // Debug LED Staste: Serial.println(LED_STATE);
 
     switch(LED_STATE) {
       case 3: {
-          strip.setBrightness(5); 
-          
           unsigned long currentMillis = millis();
-          
             if(currentMillis - previousMillis >= interval) {
               previousMillis = currentMillis;   
                rainbow(20); 
-            }  
-            
+            }              
           break; }
       case 4:
           CylonBounce(0xff, 0, 0, 5, 10, 50);
@@ -150,17 +170,23 @@ void loop() {
     }
     
     server.handleClient();  
-   
-  }
-
+  
+  
+ 
 }
 
 
 // Server Control Paths
 
 void handleRootPath() {           
-  String content = "<html><head><title>Desk Light Strip</title></head>";
-  content += "<style>svg {fill:#000;}div a:hover svg { fill: #fff; }body{font-family:verdana,sans-serif;background-color: #000000; background-image: linear-gradient(6deg, #000000 0%, #3e3e3e 100%);}.footnote{color:#fff; font-size: 1.5em;}.power{display:flex; width: 100%; flex-wrap:wrap;}.controller{display:flex;width:100%;flex-wrap:wrap;margin-left:-5px;}a{display:block;width:49%;margin-left:10px;margin-bottom:10px;flex-grow:2;} a button{background-color: #6b6b6b;background-image: linear-gradient(6deg, #e2e2e2 0%, #ffffff 100%);font-weight:bold;font-size:1.75em;width:100%;height:25%;border:0px;border-radius: 15px;}button:hover{color:#fff; background-color: #caffff; background-image: linear-gradient(180deg, #caffff 0%, #93d8d8 100%);cursor:hand;}";
+  String content = "<html><head><title>Desk Light Strip</title>"; 
+  
+  // Base 64 encoded favicon
+  content += "<link rel=\"shortcut icon\" href=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAkCAYAAADhAJiYAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAK7OHOkAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAZiS0dEAAAAAAAA+UO7fwAAAAlwSFlzAAAASAAAAEgARslrPgAAAeBJREFUWMPt179qFFEUBvCfGq1iI0bU3Yg2guAbKGhs1Sj49wEk2Jg+3XZqaadgJT6BsNgYxGUD+ggqWOiagF20M+6uxcyQ48JsZmcGArIfDHzLPfe73zlzz72zTDFFNeypQeM8zqV8Dd3dTqqFYfq0qort3e1s/itDN7FSYo0V3Kjb+H0MJPvk0chYS/4eysYGWK7LzN1gZoivOFrA0HF8D2MD3KpqZh6/gmgXRyao0DG8D+M/0Ry34E576DFmU97DdfyYIKENLGI9/X0QD8tW5yT+hOwu5MSNq1CGhRCzhRNlKnQb+1L+Ae/KZoa3WE35TKo9saFLgT+rYCbDyxztwobOBt6pwdBajnZhQ4cD79Vg6Fvgc2UMbQW+vwZDBwL/nRc0M0ZgHadT3sDHnLiu5HjIeB4agW+Uyei17Va9V0OFloJeOy9o3CuLk+7UYChqtMsIzCt2MBbB6MHYLCv0PAh98W/nFcUhfA46TyskpiG5EDOxTrrAJGY6Yf6m5MKthEX0g+gnXCwwb2GkMn1crWomw/KIqSHeSDrnjOSLYDblS5J7K8b28aAuM7FS8fUVfTZxpW4zGebwRNIpOxnp44UJ90zZP4pNXMNlnLLdxj1JN7bxSj134BRTTFEr/gJjkZYrYDLmgAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAxNy0wOS0wN1QwMjoxMTo1MyswMDowMAsCEWsAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMTctMDktMDdUMDI6MTE6NTMrMDA6MDB6X6nXAAAAKHRFWHRzdmc6YmFzZS11cmkAZmlsZTovLy90bXAvbWFnaWNrLTdmN3p1bmtNdOrSigAAAABJRU5ErkJggg==\" />";
+  content += "</head>";
+
+  // Stylesheet
+  content += "<style type=\"text/css\">body{font-family:verdana,sans-serif;background-color: #000000; background-image: linear-gradient(6deg, #000000 0%, #3e3e3e 100%);}.footnote{color:#fff; font-size: 1.5em;}svg {fill:#000;}div a:hover svg { fill: #fff; }.power{display:flex; width: 100%; flex-wrap:wrap;}.controller{display:flex;width:100%;flex-wrap:wrap;margin-left:-5px;}a{display:block;width:49%;margin-left:10px;margin-bottom:10px;flex-grow:2;} a button{background-color: #6b6b6b;background-image: linear-gradient(6deg, #e2e2e2 0%, #ffffff 100%);font-weight:bold;font-size:3em;width:100%;height:25%;border:0px;border-radius: 15px;}button:hover{color:#fff; background-color: #caffff; background-image: linear-gradient(180deg, #caffff 0%, #93d8d8 100%);cursor:hand;}";
   content += " .on { background-color: #fbf5c0; background-image: linear-gradient(0deg, #fbf5c0 0%, #c3fcf8 50%, #ffffff 100%); }";
   content += " .off { background-color: #212121; background-image: linear-gradient(135deg, #212121 0%, #7a7a7a 100%); color:#fff;}";
   content += " .red { background-color: #af0002; background-image: linear-gradient(0deg, #af0002 0%, #FF2525 74%); }";
@@ -176,41 +202,38 @@ void handleRootPath() {
     content += "the user agent used is : " + server.header("User-Agent") + "<br><br>";
   }
 
-
   // Power DIV, Separate from the rest and static
   content += "<div class=\"power\">";
-  content += "<a onclick='makeAjaxCall(\"/on\");addClass(document.getElementById(\"on\"),\"on\")'\"><button id=\"on\">";
+  content += "<a onclick='makeAjaxCall(\"/on\")'\"><button id=\"on\">";
   content += "<svg style=\"width:25%;height:25%\" viewBox=\"0 0 24 24\"><path d=\"M11,0V4H13V0H11M18.3,2.29L15.24,5.29L16.64,6.71L19.7,3.71L18.3,2.29M5.71,2.29L4.29,3.71L7.29,6.71L8.71,5.29L5.71,2.29M12,6A4,4 0 0,0 8,10V16H6V18H9V23H11V18H13V23H15V18H18V16H16V10A4,4 0 0,0 12,6M2,9V11H6V9H2M18,9V11H22V9H18Z\" /></svg>";
   content += "</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/off\");addClass(document.getElementById(\"off\"),\"off\")'\"><button id=\"off\">";
+  content += "<a onclick='makeAjaxCall(\"/off\")'\"><button id=\"off\">";
   content += "<svg style=\"width:25%;height:25%\" viewBox=\"0 0 24 24\"><path d=\"M12,3C10.05,3 8.43,4.4 8.08,6.25L16.82,15H18V13H16V7A4,4 0 0,0 12,3M3.28,4L2,5.27L8,11.27V13H6V15H9V21H11V15H11.73L13,16.27V21H15V18.27L18.73,22L20,20.72L15,15.72L8,8.72L3.28,4Z\" /></svg>";
   content += "</button></a>";
   content += "</div>";
 
   // Controller DIV, shifts button order when active
   content += "<div class=\"controller\">";
-  content += "<a onclick='makeAjaxCall(\"/red\");addClass(document.getElementById(\"red\"),\"red\")'\"><button id=\"red\">Red</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/sparkle\");addClass(document.getElementById(\"sparkle\"),\"sparkle\")'\"><button id=\"sparkle\">Sparkle</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/cylon\");addClass(document.getElementById(\"cylon\"),\"cylon\")'\"><button id=\"cylon\">Cylon</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/fire\");addClass(document.getElementById(\"fire\"),\"fire\")'\"><button id=\"fire\">Fire</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/sunset\");addClass(document.getElementById(\"sunset\"),\"sunset\")'\"><button id=\"sunset\">Sunset</button></a>";
-  content += "<a onclick='makeAjaxCall(\"/rainbow\");addClass(document.getElementById(\"rainbow\"),\"rainbow\")'\"><button id=\"rainbow\">Rainbow</button></a>";
+  content += "<a onclick='makeAjaxCall(\"/red\")'\"><button id=\"red\">Red</button></a>";
+  content += "<a onclick='makeAjaxCall(\"/sparkle\")'\"><button id=\"sparkle\">Sparkle</button></a>";
+  content += "<a onclick='makeAjaxCall(\"/cylon\")'\"><button id=\"cylon\">Cylon</button></a>";
+  content += "<a onclick='makeAjaxCall(\"/fire\")'\"><button id=\"fire\">Fire</button></a>";
+  content += "<a onclick='makeAjaxCall(\"/sunset\")'\"><button id=\"sunset\">Sunset</button></a>";
+  content += "<a onclick='makeAjaxCall(\"/rainbow\")'\"><button id=\"rainbow\">Rainbow</button></a>";
   content += "</div>";
   
   // Footnote
-  content += "<div class=\"footnote\"><sup>The End</sup>";
-  content += "</div>";
+  content += "<div class=\"footnote\">Simple LED Strip Controller Version 1.1.1<br/><a href=\"https://github.com/eighthree/Simple-LED-Strip-Controller\" target=\"_new\">https://github.com/eighthree/Simple-LED-Strip-Controller</a><br/></div>";
 
-  // JS for ajax request
+  // JS for ajax request & button toggles
   content += "<script type=\"text/javascript\">function makeAjaxCall(e){var t=new XMLHttpRequest;t.onreadystatechange=function(){t.readyState==XMLHttpRequest.DONE&&(200==t.status?console.log(\"response form Ajax\"):400==t.status?alert(\"There was an error 400\"):alert(\"something else other than 200 was returned\"))},t.open(\"GET\",e,!0),t.send()}";
-  content += "function addClass(t,s){var a=t.getAttribute(\"class\");void 0!==a&&a?t.setAttribute(\"class\",a+\" \"+s):t.setAttribute(\"class\",s)}";
-  content += "function removeClass(e,t){var s=e.getAttribute(\"class\");if(void 0!==s&&s){var r=s.indexOf(t);if(-1!=r){var i=s.substr(r,t.length),a=s.replace(i,\"\").trim();e.setAttribute(\"class\",a)}}else e.removeAttribute(\"class\")}";
+  content += "function changeClass(){for(var t=document.getElementsByTagName(\"button\"),e=0;e<t.length;e++){var n=t[e].getAttribute(\"id\");this.getAttribute(\"id\")==n?document.getElementById(n).className=n:document.getElementById(n).className=\"inactive\"}}window.onload=function(){for(var t=document.getElementsByTagName(\"button\"),e=0;e<t.length;e++){var n=t[e].getAttribute(\"id\");document.getElementById(n).addEventListener(\"click\",changeClass)}};";
   content += "</script>";
-  
+
+ 
   content += "</body></html>";
   server.send(200, "text/html", content);
 
- 
 }
 
 
@@ -371,7 +394,6 @@ void theaterChaseRainbow(uint8_t wait) {
     }
   }
 }
-
 
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.

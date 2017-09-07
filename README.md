@@ -1,4 +1,4 @@
-# Simple LED Strip Controller 1.1
+# Simple LED Strip Controller 1.1.1
 
 * Control a LED light strip via a web browser.
 * Allow configuration of device wifi settings via AP
@@ -31,6 +31,8 @@ _*You can use any Wifi-capable Arduino, your mileage may vary_
 * WiFiManager, https://github.com/tzapu/WiFiManager
 * Adafruit_NeoPixel.h, https://github.com/adafruit/Adafruit_NeoPixel
 * ESP8266WebServer.h, https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
+* DoubleResetDetector.h>, https://github.com/datacute/DoubleResetDetector/
+* Google Material Icons, https://material.io/icons/
 
 ## License
 This code is public domain. You can redistribute it and/or modify it under the terms of the
