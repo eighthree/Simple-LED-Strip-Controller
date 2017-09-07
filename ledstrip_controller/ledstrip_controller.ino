@@ -1,4 +1,4 @@
-/*  Simple LED Strip Controller 1.0 */
+/*  Simple LED Strip Controller 1.1.1 */
 /*  
  *  Author: Timothy Garcia (http://timothygarcia.ca)
  *  Date: September 2017
@@ -140,14 +140,14 @@ void setup() {
   server.on("/sparkle", sparkleLight);
   server.on("/fire", fireLight);
   server.on("/sunset", sunsetLight);
-  
+  server.on("/theatre", theatreLight);
+  server.on("/blue", blueLight);
+  server.on("/green", greenLight);
+  server.on("/purple", purpleLight);
 }
 
 
 void loop() {
-  drd.loop();
-
-    
     // Debug LED Staste: Serial.println(LED_STATE);
 
     switch(LED_STATE) {
@@ -167,17 +167,23 @@ void loop() {
       case 6:
           Fire(55,120,15);
           break;
+      case 8:
+          theaterChase(strip.Color(127, 127, 127), 50);
+          break;
     }
     
     server.handleClient();  
   
-  
+    // Call the double reset detector loop method every so often,
+    // so that it can recognise when the timeout expires.
+    // You can also call drd.stop() when you wish to no longer
+    // consider the next reset as a double reset.
+    drd.loop();
  
 }
 
 
 // Server Control Paths
-
 void handleRootPath() {           
   String content = "<html><head><title>Desk Light Strip</title>"; 
   
@@ -186,15 +192,21 @@ void handleRootPath() {
   content += "</head>";
 
   // Stylesheet
-  content += "<style type=\"text/css\">body{font-family:verdana,sans-serif;background-color: #000000; background-image: linear-gradient(6deg, #000000 0%, #3e3e3e 100%);}.footnote{color:#fff; font-size: 1.5em;}svg {fill:#000;}div a:hover svg { fill: #fff; }.power{display:flex; width: 100%; flex-wrap:wrap;}.controller{display:flex;width:100%;flex-wrap:wrap;margin-left:-5px;}a{display:block;width:49%;margin-left:10px;margin-bottom:10px;flex-grow:2;} a button{background-color: #6b6b6b;background-image: linear-gradient(6deg, #e2e2e2 0%, #ffffff 100%);font-weight:bold;font-size:3em;width:100%;height:25%;border:0px;border-radius: 15px;}button:hover{color:#fff; background-color: #caffff; background-image: linear-gradient(180deg, #caffff 0%, #93d8d8 100%);cursor:hand;}";
-  content += " .on { background-color: #fbf5c0; background-image: linear-gradient(0deg, #fbf5c0 0%, #c3fcf8 50%, #ffffff 100%); }";
+  content += "<style type=\"text/css\">body{font-family:verdana,sans-serif;background-color: #000000; background-image: linear-gradient(6deg, #000000 0%, #3e3e3e 100%);}.footnote{color:#fff; font-size: 1em;}svg {fill:#000;}div a:hover svg { fill: #fff; }.power{display:flex; width: 100%; flex-wrap:wrap; margin-left:-5px;}.controller{display:flex;width:100%;flex-wrap:wrap;margin-left:-5px;}a{display:block;width:49%;margin-left:10px;margin-bottom:10px;flex-grow:2;} a button{background-color: #6b6b6b;background-image: linear-gradient(6deg, #e2e2e2 0%, #ffffff 100%);font-weight:bold;font-size:3em;width:100%;height:25%;border:0px;border-radius: 15px;}button:hover{color:#fff; background-color: #caffff; background-image: linear-gradient(180deg, #caffff 0%, #93d8d8 100%);cursor:hand;}";
+  content += " .on { background-color: #ffcd6a; background-image: linear-gradient(0deg, #ffcd6a 0%, #fffcde 100%); }";
   content += " .off { background-color: #212121; background-image: linear-gradient(135deg, #212121 0%, #7a7a7a 100%); color:#fff;}";
-  content += " .red { background-color: #af0002; background-image: linear-gradient(0deg, #af0002 0%, #FF2525 74%); }";
-  content += " .rainbow { background-color: #dc0003; background-image: linear-gradient(182deg, #dc0003 8%, #ff9600 22%, #9bb509 48%, #0dc5d0 66%, #e969ff 91%, #7200ff 100%); }";
+  content += " .red { background-color: #ff5959; background-image: linear-gradient(45deg, #ff5959 0%, #bb0003 100%); }";
+  content += " .blue { background-color: #21D4FD; background-image: linear-gradient(19deg, #21D4FD 0%, #7021ff 100%); }";
+  content += " .green { background-color: #7cc000; background-image: linear-gradient(19deg, #7cc000 0%, #00bd5d 100%); }";
+  content += " .purple { background-color: #5f03d2; background-image: linear-gradient(19deg, #5f03d2 0%, #B721FF 100%); }";
+  content += " .rainbow { background-color: #fd4000; background-image: linear-gradient(0deg, #fd4000 0%, #fdd90a 27%, #2AF598 51%, #00e9e7 71%, #718bef 100%); }";
   content += " .cylon { background-color: #000000; background-image: linear-gradient(0deg, #000000 0%, #ff0002 50%, #000000 100%); }";
-  content += " .sparkle { background-color: #000000; background-image: linear-gradient(0deg, #000000 0%, #ffffff 30%, #535353 57%, #ffffff 77%, #000000 91%, #4a4a4a 100%); }";
-  content += " .fire { background-color: #af0002; background-image: linear-gradient(0deg, #af0002 0%, #FF2525 74%); }";
-  content += " .sunset { background-color: #FBAB7E; background-image: linear-gradient(322deg, #FBAB7E 0%, #F7CE68 100%); }</style>";
+  content += " .sparkle { background-color: #ffffff; background-image: linear-gradient(155deg, #ffffff 0%, #DDD6F3 36%, #ffffff 66%, #FAACA8 100%); }";
+  content += " .fire { background-color: #af0002; background-image: linear-gradient(4deg, #af0002 0%, #FF2525 14%, #f7bc49 39%, #ffffff 60%, #ffffff 80%, #ffe0e0 100%); }";
+  content += " .sunset { background-color: #FBAB7E; background-image: linear-gradient(322deg, #FBAB7E 0%, #F7CE68 100%); }";
+  content += " .theatre { background-color: #ffdb00; background-image: linear-gradient(123deg, #ffdb00 0%, #ff0000 56%, #000000 100%); }</style>";
+
+
 
   content += "<body>";
 
@@ -212,30 +224,32 @@ void handleRootPath() {
   content += "</button></a>";
   content += "</div>";
 
-  // Controller DIV, shifts button order when active
+  // Controller DIV
   content += "<div class=\"controller\">";
   content += "<a onclick='makeAjaxCall(\"/red\")'\"><button id=\"red\">Red</button></a>";
+  content += "<a onclick='makeAjaxCall(\"/green\")'\"><button id=\"green\">Green</button></a>";
+  content += "<a onclick='makeAjaxCall(\"/blue\")'\"><button id=\"blue\">Blue</button></a>";
+  content += "<a onclick='makeAjaxCall(\"/purple\")'\"><button id=\"purple\">Purple</button></a>";
   content += "<a onclick='makeAjaxCall(\"/sparkle\")'\"><button id=\"sparkle\">Sparkle</button></a>";
   content += "<a onclick='makeAjaxCall(\"/cylon\")'\"><button id=\"cylon\">Cylon</button></a>";
   content += "<a onclick='makeAjaxCall(\"/fire\")'\"><button id=\"fire\">Fire</button></a>";
   content += "<a onclick='makeAjaxCall(\"/sunset\")'\"><button id=\"sunset\">Sunset</button></a>";
+  content += "<a onclick='makeAjaxCall(\"/theatre\")'\"><button id=\"theatre\">Theatre</button></a>";
   content += "<a onclick='makeAjaxCall(\"/rainbow\")'\"><button id=\"rainbow\">Rainbow</button></a>";
   content += "</div>";
   
   // Footnote
-  content += "<div class=\"footnote\">Simple LED Strip Controller Version 1.1.1<br/><a href=\"https://github.com/eighthree/Simple-LED-Strip-Controller\" target=\"_new\">https://github.com/eighthree/Simple-LED-Strip-Controller</a><br/></div>";
+  content += "<div class=\"footnote\">&nbsp; Simple LED Strip Controller Version 1.1.1 <br/><a href=\"https://github.com/eighthree/Simple-LED-Strip-Controller\" target=\"_new\">View Project on Github</a><br/></div>";
 
   // JS for ajax request & button toggles
   content += "<script type=\"text/javascript\">function makeAjaxCall(e){var t=new XMLHttpRequest;t.onreadystatechange=function(){t.readyState==XMLHttpRequest.DONE&&(200==t.status?console.log(\"response form Ajax\"):400==t.status?alert(\"There was an error 400\"):alert(\"something else other than 200 was returned\"))},t.open(\"GET\",e,!0),t.send()}";
   content += "function changeClass(){for(var t=document.getElementsByTagName(\"button\"),e=0;e<t.length;e++){var n=t[e].getAttribute(\"id\");this.getAttribute(\"id\")==n?document.getElementById(n).className=n:document.getElementById(n).className=\"inactive\"}}window.onload=function(){for(var t=document.getElementsByTagName(\"button\"),e=0;e<t.length;e++){var n=t[e].getAttribute(\"id\");document.getElementById(n).addEventListener(\"click\",changeClass)}};";
   content += "</script>";
 
- 
   content += "</body></html>";
   server.send(200, "text/html", content);
 
 }
-
 
 void ledON(){
   LED_STATE = 0;
@@ -243,7 +257,6 @@ void ledON(){
   colorWipe(strip.Color(100,100,100), 50);
   handleRootPath();
 }
-
 
 void ledOFF(){
   LED_STATE = 1;
@@ -282,7 +295,33 @@ void fireLight(){
 void sunsetLight(){
   LED_STATE = 7;
   strip.setBrightness(8);
-  colorWipe(strip.Color(251, 171, 76), 50);
+  colorWipe(strip.Color(255, 108, 0), 50);
+  handleRootPath(); 
+}
+
+void theatreLight(){
+  LED_STATE = 8;
+  handleRootPath();
+}
+
+void blueLight() {
+  LED_STATE = 9;
+  strip.setBrightness(15);
+  colorWipe(strip.Color(0, 0, 255), 50);
+  handleRootPath(); 
+}
+
+void greenLight() {
+  LED_STATE = 10;
+  strip.setBrightness(20);
+  colorWipe(strip.Color(0, 255, 0), 50);
+  handleRootPath(); 
+}
+
+void purpleLight() {
+  LED_STATE = 11;
+  strip.setBrightness(20);
+  colorWipe(strip.Color(80, 0, 200), 50);
   handleRootPath(); 
 }
 
@@ -298,7 +337,6 @@ void showStrip() {
  #endif
 }
 
-
 void setPixel(int Pixel, byte red, byte green, byte blue) {
  #ifdef ADAFRUIT_NEOPIXEL_H 
    // NeoPixel
@@ -311,7 +349,6 @@ void setPixel(int Pixel, byte red, byte green, byte blue) {
    leds[Pixel].b = blue;
  #endif
 }
-
 
 void setAll(byte red, byte green, byte blue) {
   for(int i = 0; i < NUM_LEDS; i++ ) {
@@ -328,7 +365,6 @@ void colorWipe(uint32_t c, uint8_t wait) {
     delay(wait);
   }
 }
-
 
 // Modified to work with better timing
 void rainbow(uint8_t wait) {
@@ -357,7 +393,6 @@ void rainbowCycle(uint8_t wait) {
   }
 }
 
-
 //Theatre-style crawling lights.
 void theaterChase(uint32_t c, uint8_t wait) {
   for (int j=0; j<10; j++) {  //do 10 cycles of chasing
@@ -375,7 +410,6 @@ void theaterChase(uint32_t c, uint8_t wait) {
     }
   }
 }
-
 
 //Theatre-style crawling lights with rainbow effect
 void theaterChaseRainbow(uint8_t wait) {
@@ -410,7 +444,7 @@ uint32_t Wheel(byte WheelPos) {
   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 }
 
-
+// Shifts lights a-la-CYLONS from Battlestar Galactica
 void CylonBounce(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, int ReturnDelay){
 
   for(int i = 0; i < NUM_LEDS-EyeSize-2; i++) {
@@ -440,29 +474,7 @@ void CylonBounce(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, i
   delay(ReturnDelay);
 }
 
-
-void RunningLights(byte red, byte green, byte blue, int WaveDelay) {
-  int Position=0;
-  
-  for(int i=0; i<NUM_LEDS*2; i++)
-  {
-      Position++; // = 0; //Position + Rate;
-      for(int i=0; i<NUM_LEDS; i++) {
-        // sine wave, 3 offset waves make a rainbow!
-        //float level = sin(i+Position) * 127 + 128;
-        //setPixel(i,level,0,0);
-        //float level = sin(i+Position) * 127 + 128;
-        setPixel(i,((sin(i+Position) * 127 + 128)/255)*red,
-                   ((sin(i+Position) * 127 + 128)/255)*green,
-                   ((sin(i+Position) * 127 + 128)/255)*blue);
-      }
-      
-      showStrip();
-      delay(WaveDelay);
-  }
-}
-
-
+// Fire-like, works best on multiple light arrays
 void Fire(int Cooling, int Sparking, int SpeedDelay) {
   static byte heat[NUM_LEDS];
   int cooldown;
@@ -517,55 +529,7 @@ void setPixelHeatColor (int Pixel, byte temperature) {
   }
 }
 
-
-void BouncingBalls(byte red, byte green, byte blue, int BallCount) {
-  float Gravity = -9.81;
-  int StartHeight = 1;
-  
-  float Height[BallCount];
-  float ImpactVelocityStart = sqrt( -2 * Gravity * StartHeight );
-  float ImpactVelocity[BallCount];
-  float TimeSinceLastBounce[BallCount];
-  int   Position[BallCount];
-  long  ClockTimeSinceLastBounce[BallCount];
-  float Dampening[BallCount];
-  
-  for (int i = 0 ; i < BallCount ; i++) {   
-    ClockTimeSinceLastBounce[i] = millis();
-    Height[i] = StartHeight;
-    Position[i] = 0; 
-    ImpactVelocity[i] = ImpactVelocityStart;
-    TimeSinceLastBounce[i] = 0;
-    Dampening[i] = 0.90 - float(i)/pow(BallCount,2); 
-  }
-
-  while (true) {
-    for (int i = 0 ; i < BallCount ; i++) {
-      TimeSinceLastBounce[i] =  millis() - ClockTimeSinceLastBounce[i];
-      Height[i] = 0.5 * Gravity * pow( TimeSinceLastBounce[i]/1000 , 2.0 ) + ImpactVelocity[i] * TimeSinceLastBounce[i]/1000;
-  
-      if ( Height[i] < 0 ) {                      
-        Height[i] = 0;
-        ImpactVelocity[i] = Dampening[i] * ImpactVelocity[i];
-        ClockTimeSinceLastBounce[i] = millis();
-  
-        if ( ImpactVelocity[i] < 0.01 ) {
-          ImpactVelocity[i] = ImpactVelocityStart;
-        }
-      }
-      Position[i] = round( Height[i] * (NUM_LEDS - 1) / StartHeight);
-    }
-  
-    for (int i = 0 ; i < BallCount ; i++) {
-      setPixel(Position[i],red,green,blue);
-    }
-    
-    showStrip();
-    setAll(0,0,0);
-  }
-}
-
-
+// Randomly blinks a light brightly
 void SnowSparkle(byte red, byte green, byte blue, int SparkleDelay, int SpeedDelay) {
   setAll(red,green,blue);
   
