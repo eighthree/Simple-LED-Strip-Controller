@@ -1,15 +1,17 @@
-# Simple LED Strip Controller 1.2.0
+# Simple LED Strip Controller 1.2.5
 
 *  Control an LED light strip via a web browser
 *  Allow configuration of device wifi settings via AP
 *  Serves a light browser-based controller with simple CSS for functionality
 *  Hardware mode switch between colour settings
+*  Supports Homekit via Homebridge
 
 ![led-control-panel](https://user-images.githubusercontent.com/1100950/30188844-a25f4af6-93e5-11e7-91b9-a2b1629a84f0.PNG)
 
 **[Status](#status)** |
 **[Hardware Used](#hardware-used)** |
 **[Libraries](#libraries)** |
+**[HomeKit](#homekit)** |
 **[License](#license)**
 
 ## Status
@@ -37,6 +39,11 @@ _* You can use any Wifi-capable Arduino, your mileage may vary_
 * ESP8266WebServer.h, https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
 * DoubleResetDetector.h>, https://github.com/datacute/DoubleResetDetector/
 * Google Material Icons, https://material.io/icons/
+* JSColor 2.0.4 http://jscolor.com/
+
+## HomeKit
+Install https://github.com/nfarina/homebridge on a Raspberry Pi or similar and
+install this accessory https://github.com/metbosch/homebridge-http-rgb-bulb
 
 _* FastLED should work as well but is not tested._
 

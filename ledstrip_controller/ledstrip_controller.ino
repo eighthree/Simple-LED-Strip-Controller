@@ -1,4 +1,4 @@
-/*  Simple LED Strip Controller 1.2.0
+/*  Simple LED Strip Controller 1.2.5
  *  Author: Timothy Garcia (http://timothygarcia.ca)
  *  Date: September 2017
  *  
@@ -7,6 +7,7 @@
  *  Allow configuration of device wifi settings via AP
  *  Serves a light browser-based controller with simple CSS for functionality
  *  Hardware mode switch between colour settings
+ *  Supports Homekit via Homebridge https://github.com/nfarina/homebridge with https://github.com/metbosch/homebridge-http-rgb-bulb
  *  
  *  Hardware Used:
  *  NodeMCU 1.0 / 10K Ohm Resistor / 470 Ohm Resistor / Momentary Switch / Protoype Board / 3-pin header (for LED)
@@ -18,25 +19,27 @@
  *  LadyAda www.ladyada.net/learn/arduino/lesson5.html
  *  Brian L. https://www.youtube.com/user/witnessmenow
  *  Embedded Icons: https://material.io/icons/
+ *  JSColor: jscolor-2.0.4 http://jscolor.com/
  *  
  *  License: This code is public domain. You can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published
  *  by the Free Software Foundation.  <http://www.gnu.org/licenses/>.
  *  Certain libraries used may be under a different license.
 */ 
-
 #include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
-#include <DNSServer.h>            //https://github.com/esp8266/Arduino/tree/master/libraries/DNSServer
 #include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
+#include <DNSServer.h>            //https://github.com/esp8266/Arduino/tree/master/libraries/DNSServer
 #include <Adafruit_NeoPixel.h>    //https://github.com/adafruit/Adafruit_NeoPixel
 #include <ESP8266WebServer.h>     //https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
 #include <DoubleResetDetector.h>  //https://github.com/datacute/DoubleResetDetector/
+#include "FS.h"                   //used for SPIFF
 
 // Neopixel Setup
 #define PIN D6
 #define NUM_LEDS 29
+#define BRIGHTNESS 5
 
 // DRD Setup
-#define DRD_TIMEOUT 10          // Number of seconds after reset during which a subseqent reset will be considered a double reset.
+#define DRD_TIMEOUT 10         // Number of seconds after reset during which a subseqent reset will be considered a double reset.
 #define DRD_ADDRESS 0           // RTC Memory Address for the DoubleResetDetector to use
 
 // AP Setup
@@ -51,6 +54,12 @@ uint8_t buttonState;                // variable to hold the button state
 // For LED animations that loop/cycle
 uint8_t LED_STATE = 0;
 
+// For Custom RGB Values
+uint8_t R_LED = 0;
+uint8_t G_LED = 0;
+uint8_t B_LED = 0;
+
+// Names for modes (case & order sensitive)
 char* LED_MODES[] ={"off","on","red","rainbow","cylon","sparkle","fire","sunset","theatre","blue","green","purple"};
 
 // Timing Related to Colour
@@ -63,25 +72,23 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800)
 ESP8266WebServer server(80);      // ESP8266 Web Server Port: Default 80
 DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
 
-// Callback for AP Setup
-void configModeCallback (WiFiManager *myWiFiManager) {
-  Serial.println("Entered config mode");
-  Serial.println(WiFi.softAPIP());
-  strip.setPixelColor(0, strip.Color(100, 0, 0));
-  strip.setPixelColor(1, strip.Color(0, 200, 0));
-  strip.setPixelColor(2, strip.Color(100, 0, 200));
-  strip.show();
-  drd.stop();
-}
+// Server SPIFFS
+// upload files from /data folder
+// follow instructions here:
+// http://esp8266.github.io/Arduino/versions/2.0.0-rc2/doc/filesystem.html#uploading-files-to-file-system
+// Un-compressed files are available in their respective css/js folders.
+String getContentType(String filename); // convert the file extension to the MIME type
+bool handleFileRead(String path);       // send the right file to the client (if it exists)
+
 void setup() {
-  //Serial.begin(115200);
-  //Serial.println("\n Starting");
+  Serial.begin(115200);
+  Serial.println("\n Starting");
 
   pinMode(TRIGGER_PIN, INPUT);
   pinMode(LED_BUILTIN, OUTPUT);
-  
+
   strip.begin();              // Start neopixels
-  strip.setBrightness(5);     // Set brightness for strip to 5, prevents drawing too much power.
+  strip.setBrightness(BRIGHTNESS);     // Set brightness for strip to 5, prevents drawing too much power.
   strip.show();               // Initialize all pixels to 'off'
 
   
@@ -127,14 +134,16 @@ void setup() {
   }
 
   server.begin();  //Start the server
+  SPIFFS.begin();
   //Serial.println("Server listening");
   
   buttonState = digitalRead(TRIGGER_PIN);
   //Serial.println("Current button state on startup:");
   //Serial.println(buttonState);
 
-  colorWipe(strip.Color(100, 100, 100), 50); // Set strip colour to white
-
+  // Wipe white before server starts
+  colorWipe(strip.Color(100, 100, 100), 20); // Set strip colour to white
+  
   //Associate the handler function to the path
   server.on("/", [](){
     handleRootPath(LED_STATE);
@@ -151,12 +160,20 @@ void setup() {
   server.on("/blue", blueLight);
   server.on("/green", greenLight);
   server.on("/purple", purpleLight);
+
+  // Serve javascript & CSS files with expires headers
+  server.serveStatic("/jscolor.min.js",  SPIFFS, "/jscolor.min.js" ,"max-age=86400"); 
+  server.serveStatic("/styles.min.css",  SPIFFS, "/styles.min.css" ,"max-age=86400"); 
+  server.serveStatic("/script.min.js",  SPIFFS, "/script.min.js" ,"max-age=86400"); 
+
+  // Custom RGB controller
+  // Built for use with something like this:
+  // https://github.com/metbosch/homebridge-http-rgb-bulb
+  server.on("/rgb", handleGenericArgs); //Associate the handler function to the path
   
 }
 
-
 void loop() {
-
     // Mode Switcher
     // Based on Lady Ada's bike lights
     val = digitalRead(TRIGGER_PIN);      // read input value and store it in val
@@ -166,7 +183,6 @@ void loop() {
     if (val == val2) {                 // make sure we got 2 consistant readings!
       if (val != buttonState) {          // the button state has changed!
         if (val == HIGH) {                // check if the button is pressed
-
             switch(LED_STATE) {
               case 0:
                 ledON();
@@ -213,13 +229,17 @@ void loop() {
                 purpleLight();
                 LED_STATE = 0;
                 break;
+              case 255:
+                LED_STATE = 0;
+                break;
              } // End Switch
              
           }
         }
       }
-   
-   buttonState = val;                 // save the new state in our variable
+      
+   // save the new state in our variable
+   buttonState = val;                 
     
     // Debug Button State
     //Serial.println(buttonState);
@@ -227,12 +247,10 @@ void loop() {
 
     switch(LED_STATE) {
       case 1: {
-          strip.setBrightness(10);
-          colorWipe(strip.Color(100,100,100), 50);
+          colorWipe(strip.Color(R_LED,G_LED,B_LED), 50);
           break;
       }
       case 2: {
-          strip.setBrightness(5);
           colorWipe(strip.Color(255, 0, 0), 50);
           break;
       }
@@ -243,17 +261,19 @@ void loop() {
                rainbow(20); 
             }              
           break; }
-      case 4:
+      case 4: {
           CylonBounce(0xff, 0, 0, 5, 10, 50);
           break;
-      case 5:
+      }
+      case 5: {
           SnowSparkle(0x10, 0x10, 0x10, 20, 200);
           break;
-      case 6:
+      }
+      case 6: {
           Fire(55,120,15);
           break;
+      }
       case 7: {
-          strip.setBrightness(8);
           colorWipe(strip.Color(255, 108, 0), 50);
            break;
       }
@@ -262,24 +282,24 @@ void loop() {
           break;
       }
       case 9: {
-          strip.setBrightness(15);
           colorWipe(strip.Color(0, 0, 255), 50);
            break;
       }
       case 10: {
-          strip.setBrightness(20);
           colorWipe(strip.Color(0, 255, 0), 50);
            break;
       }
       case 11: {
-          strip.setBrightness(20);
           colorWipe(strip.Color(80, 0, 200), 50);
           break;
       }
       case 0: {
-          strip.setBrightness(5);
           colorWipe(strip.Color(0, 0, 0), 50);
           break;
+      }
+      case 255:{
+        colorWipe(strip.Color(R_LED, G_LED, B_LED), 10);
+        break;
       }
     }
     
@@ -294,44 +314,85 @@ void loop() {
 }
 
 
+// Callback for AP Setup
+void configModeCallback (WiFiManager *myWiFiManager) {
+  Serial.println("Entered config mode");
+  Serial.println(WiFi.softAPIP());
+
+  // Fancy Colour Signal
+  strip.setPixelColor(0, strip.Color(100, 0, 0));
+  strip.setPixelColor(1, strip.Color(0, 200, 0));
+  strip.setPixelColor(2, strip.Color(100, 0, 200));
+  
+  strip.show();
+  drd.stop();
+}
+
+// Sets custom colours
+// Gets rgb?color=0x values
+// Provides rgb?format=hex
+// for homebridge support https://github.com/metbosch/homebridge-http-rgb-bulb
+void handleGenericArgs() { 
+// Converts current RGB values into hex
+long currentRGB =(R_LED << 16L) | (G_LED << 8) | B_LED;
+String currentHEX = String(currentRGB, HEX); 
+          
+  for (int i = 0; i < server.args(); i++) {
+    
+    if(server.argName(i) == "color")
+    {
+      String hex_raw = server.arg(i);
+      long  rgb_value = strtol(&hex_raw[2], NULL, 16);
+      // Split them up into r, g, b values
+      long r = rgb_value >> 16;
+      long g = rgb_value >> 8 & 0xFF;
+      long b = rgb_value & 0xFF;
+
+      R_LED = r;
+      G_LED = g;
+      B_LED = b;
+
+      LED_STATE = 255;
+      server.send(200, "text/plain", currentHEX);   
+    }
+
+    if(server.argName(i) == "format")
+    {
+        if(server.arg(i) == "hex") {
+          server.send(200, "text/plain", currentHEX);      
+        }
+    }
+    
+  } // end for
+  
+}
+
 // Server Control Paths
 void handleRootPath(uint8_t activeButton) {           
-  String content = "<html><head><title>Desk Light Strip</title>"; 
+  String content = "<html><head><title>" + String(PORTAL_AP_NAME) + "</title>";
   
   // Base 64 encoded favicon
   content += "<link rel=\"shortcut icon\" href=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAkCAYAAADhAJiYAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAK7OHOkAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAZiS0dEAAAAAAAA+UO7fwAAAAlwSFlzAAAASAAAAEgARslrPgAAAeBJREFUWMPt179qFFEUBvCfGq1iI0bU3Yg2guAbKGhs1Sj49wEk2Jg+3XZqaadgJT6BsNgYxGUD+ggqWOiagF20M+6uxcyQ48JsZmcGArIfDHzLPfe73zlzz72zTDFFNeypQeM8zqV8Dd3dTqqFYfq0qort3e1s/itDN7FSYo0V3Kjb+H0MJPvk0chYS/4eysYGWK7LzN1gZoivOFrA0HF8D2MD3KpqZh6/gmgXRyao0DG8D+M/0Ry34E576DFmU97DdfyYIKENLGI9/X0QD8tW5yT+hOwu5MSNq1CGhRCzhRNlKnQb+1L+Ae/KZoa3WE35TKo9saFLgT+rYCbDyxztwobOBt6pwdBajnZhQ4cD79Vg6Fvgc2UMbQW+vwZDBwL/nRc0M0ZgHadT3sDHnLiu5HjIeB4agW+Uyei17Va9V0OFloJeOy9o3CuLk+7UYChqtMsIzCt2MBbB6MHYLCv0PAh98W/nFcUhfA46TyskpiG5EDOxTrrAJGY6Yf6m5MKthEX0g+gnXCwwb2GkMn1crWomw/KIqSHeSDrnjOSLYDblS5J7K8b28aAuM7FS8fUVfTZxpW4zGebwRNIpOxnp44UJ90zZP4pNXMNlnLLdxj1JN7bxSj134BRTTFEr/gJjkZYrYDLmgAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAxNy0wOS0wN1QwMjoxMTo1MyswMDowMAsCEWsAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMTctMDktMDdUMDI6MTE6NTMrMDA6MDB6X6nXAAAAKHRFWHRzdmc6YmFzZS11cmkAZmlsZTovLy90bXAvbWFnaWNrLTdmN3p1bmtNdOrSigAAAABJRU5ErkJggg==\" />";
   content += "</head>";
 
   // Stylesheet
-  content += "<style type=\"text/css\">body{font-family:verdana,sans-serif;background-color: #000000; background-image: linear-gradient(6deg, #000000 0%, #3e3e3e 100%);}.footnote{color:#fff; font-size: 1em;}svg {fill:#000;}div a:hover svg { fill: #fff; }a:active,a:focus, {outline:0;border:none;-moz-outline-style: none; }.power{display:flex; width: 100%; flex-wrap:wrap; margin-left:-5px;}.controller{display:flex;width:100%;flex-wrap:wrap;margin-left:-5px;}a{display:block;width:49%;margin-left:10px;margin-bottom:10px;flex-grow:2;}a button {transition: all 1s ease;} input[type=\"button\"]{ outline:none; } input[type=\"button\"]::-moz-focus-inner { border: 0; } a button:hover,a button:active {-webkit-box-shadow: 0px 0px 20px 0px rgba(255,255,255,1);-moz-box-shadow: 0px 0px 20px 0px rgba(255,255,255,1);box-shadow: 0px 0px 20px 0px rgba(255,255,255,1);} a button{ text-transform: capitalize; background-color: #6b6b6b;background-image: linear-gradient(6deg, #e2e2e2 0%, #ffffff 100%);font-weight:bold;font-size:3em;width:100%;height:25%;border:0px;border-radius: 15px;}button:hover{color:#fff; background-color: #caffff; background-image: linear-gradient(180deg, #caffff 0%, #93d8d8 100%);cursor:hand;}";
-  content += "#on:active, #on:hover, .on { color:#fff; background-color: #ffcd6a; background-image: linear-gradient(0deg, #ffcd6a 0%, #fffcde 100%); }";
-  content += "#off:active, #off:hover, .off { color:#fff; background-color: #212121; background-image: linear-gradient(135deg, #212121 0%, #7a7a7a 100%); color:#fff;}";
-  content += "#red:active, #red:hover, .red { color:#fff; background-color: #ff5959; background-image: linear-gradient(45deg, #ff5959 0%, #bb0003 100%); }";
-  content += "#blue:active, #blue:hover, .blue { color:#fff; background-color: #21D4FD; background-image: linear-gradient(19deg, #21D4FD 0%, #7021ff 100%); }";
-  content += "#green:active, #green:hover, .green { color:#fff; background-color: #7cc000; background-image: linear-gradient(19deg, #7cc000 0%, #00bd5d 100%); }";
-  content += "#purple:active, #purple:hover, .purple { color:#fff; background-color: #5f03d2; background-image: linear-gradient(19deg, #5f03d2 0%, #B721FF 100%); }";
-  content += "#rainbow:active, #rainbow:hover, .rainbow { color:#fff; background-color: #fd4000; background-image: linear-gradient(0deg, #fd4000 0%, #fdd90a 27%, #2AF598 51%, #00e9e7 71%, #718bef 100%); }";
-  content += "#cylon:active, #cylon:hover, .cylon { color:#fff; background-color: #5b0000; background-image: linear-gradient(90deg, #5b0000 0%, #ff0004 50%, #5f0000 100%); }";
-  content += "#sparkle:active, #sparkle:hover, .sparkle { color:#fff; background-color: #6f6f6f; background-image: linear-gradient(19deg, #6f6f6f 0%, #ffffff 100%); }";
-  content += "#fire:active, #fire:hover, .fire { color:#fff; background-color: #fff8f8; background-image: linear-gradient(147deg, #fff8f8 0%, #FFE53B 23%, #FF2525 100%); }";
-  content += "#sunset:active, #sunset:hover, .sunset { color:#fff; background-color: #FBAB7E; background-image: linear-gradient(322deg, #FBAB7E 0%, #F7CE68 100%); }";
-  content += "#theatre:active, #theatre:hover, .theatre { color:#fff; background-color: #960000; background-image: linear-gradient(180deg, #960000 19%, #ff0000 79%, #000000 100%); }</style>";
+  content += "<link rel=\"stylesheet\" type=\"text/css\" href=\"styles.min.css\">";
   content += "<body>";
 
   if (server.hasHeader("User-Agent")){
     content += "the user agent used is : " + server.header("User-Agent") + "<br><br>";
   }
-
+  
   // Power DIV, Separate from the rest and static
   // We want to keep the power related buttons static so they're
   // in a separate div
   content += "<div class=\"power\">";
-  if(activeButton == 1) {
+  if(activeButton >= 1) {
     content += "<a onclick='makeAjaxCall(\"/" + String(LED_MODES[1]) +  "\")'\"><button class=\"" + String(LED_MODES[1]) + "\" id=\"" + String(LED_MODES[1]) +  "\">";
   } else {
     content += "<a onclick='makeAjaxCall(\"/" + String(LED_MODES[1]) +  "\")'\"><button id=\"" + String(LED_MODES[1]) +  "\">";
   }
-  content += "<svg style=\"width:25%;height:25%\" viewBox=\"0 0 24 24\"><path d=\"M11,0V4H13V0H11M18.3,2.29L15.24,5.29L16.64,6.71L19.7,3.71L18.3,2.29M5.71,2.29L4.29,3.71L7.29,6.71L8.71,5.29L5.71,2.29M12,6A4,4 0 0,0 8,10V16H6V18H9V23H11V18H13V23H15V18H18V16H16V10A4,4 0 0,0 12,6M2,9V11H6V9H2M18,9V11H22V9H18Z\" /></svg>";
+  content += "<svg id=\"led_light\" style=\"width:25%;height:25%\" viewBox=\"0 0 24 24\"><path d=\"M11,0V4H13V0H11M18.3,2.29L15.24,5.29L16.64,6.71L19.7,3.71L18.3,2.29M5.71,2.29L4.29,3.71L7.29,6.71L8.71,5.29L5.71,2.29M12,6A4,4 0 0,0 8,10V16H6V18H9V23H11V18H13V23H15V18H18V16H16V10A4,4 0 0,0 12,6M2,9V11H6V9H2M18,9V11H22V9H18Z\" /></svg>";
   content += "</button></a>";
 
   if(activeButton == 0) {
@@ -343,7 +404,11 @@ void handleRootPath(uint8_t activeButton) {
   content += "</button></a>";
   content += "</div>";
 
-  // Controller DIV
+  content += "<div class=\"colour_picker\">";
+  content += "<input class=\"jscolor {hash:true, width:400, height:250 ,borderColor:'#000', insetColor:'#FFF', backgroundColor:'#000'}\" onchange=\"update(jscolor);makeAjaxCall('/rgb?color=0x' +  this.jscolor)\" value=\"#FFFFFF\">";
+  content += "</div>";
+
+  // Container for the "Remote Control" style buttons
   content += "<div class=\"controller\">";
 
   // Create buttons dynamically and add a 'class'
@@ -356,15 +421,13 @@ void handleRootPath(uint8_t activeButton) {
     }
   } 
   content += "</div>";
-  
+
   // Footnote
-  content += "<div class=\"footnote\">&nbsp; Simple LED Strip Controller Version 1.2.0 <br/><a href=\"https://github.com/eighthree/Simple-LED-Strip-Controller\" target=\"_new\">View Project on Github</a><br/></div>";
+  content += "<div class=\"footnote\">&nbsp; Simple LED Strip Controller Version 1.2.5 <br/><a href=\"https://github.com/eighthree/Simple-LED-Strip-Controller\" target=\"_new\">View Project on Github</a><br/></div>";
 
   // JS for ajax request & button toggles
-  content += "<script type=\"text/javascript\">function makeAjaxCall(e){var t=new XMLHttpRequest;t.onreadystatechange=function(){t.readyState==XMLHttpRequest.DONE&&(200==t.status?console.log(\"response form Ajax\"):400==t.status?alert(\"There was an error 400\"):alert(\"something else other than 200 was returned\"))},t.open(\"GET\",e,!0),t.send()}";
-  content += "function changeClass(){for(var t=document.getElementsByTagName(\"button\"),e=0;e<t.length;e++){var n=t[e].getAttribute(\"id\");this.getAttribute(\"id\")==n?document.getElementById(n).className=n:document.getElementById(n).className=\"inactive\"}}window.onload=function(){for(var t=document.getElementsByTagName(\"button\"),e=0;e<t.length;e++){var n=t[e].getAttribute(\"id\");document.getElementById(n).addEventListener(\"click\",changeClass)}};";
-  content += "</script>";
-
+  content += "<script src=\"script.min.js\"></script>";
+  content += "<script src=\"jscolor.min.js\"></script>";
   content += "</body></html>";
   server.send(200, "text/html", content);
 }
@@ -374,62 +437,70 @@ void handleRootPath(uint8_t activeButton) {
 // should occur here.
 void ledOFF(){
   handleRootPath(LED_STATE);  // Refresh the root page + pass the LED state for CSS changes
+  R_LED = 0;
+  G_LED = 0;
+  B_LED = 0;
   LED_STATE = 0;              // Change LED State
 }
 
 void ledON(){
   handleRootPath(LED_STATE);
+  R_LED = 255;
+  G_LED = 255;
+  B_LED = 255;
   LED_STATE = 1;
 }
 
 void redLight(){
-  handleRootPath(LED_STATE); 
   LED_STATE = 2;
+  handleRootPath(LED_STATE); 
 }
 
 void rainbowLight(){
-  handleRootPath(LED_STATE);
   LED_STATE = 3;
+  handleRootPath(LED_STATE);
 }
 
 void cylonLight(){
-  handleRootPath(LED_STATE);
   LED_STATE = 4;
+  handleRootPath(LED_STATE);
 }
 
 void sparkleLight(){
-  handleRootPath(LED_STATE);
   LED_STATE = 5;
+  handleRootPath(LED_STATE);
+  
 }
 
 void fireLight(){
-  handleRootPath(LED_STATE);
   LED_STATE = 6;
+  handleRootPath(LED_STATE);
+  
 }
 
 void sunsetLight(){
-  handleRootPath(LED_STATE); 
   LED_STATE = 7;
+  handleRootPath(LED_STATE); 
 }
 
 void theatreLight(){
-  handleRootPath(LED_STATE);
   LED_STATE = 8;
+  handleRootPath(LED_STATE);
 }
 
 void blueLight() {
-  handleRootPath(LED_STATE);
   LED_STATE = 9; 
+  handleRootPath(LED_STATE);
 }
 
 void greenLight() {
-  handleRootPath(LED_STATE); 
   LED_STATE = 10;
+  handleRootPath(LED_STATE); 
 }
 
 void purpleLight() {
-  handleRootPath(LED_STATE); 
   LED_STATE = 11;
+  handleRootPath(LED_STATE); 
 }
 
 // LED Animations & Control
