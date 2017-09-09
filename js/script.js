@@ -22,7 +22,10 @@ function update(jscolor) {
 
     for (var t = document.getElementsByTagName("button"), e = 0; e < t.length; e++) {
         var n = t[e].getAttribute("id");
-        document.getElementById(n).className = "inactive"
+        if(n != "on")
+        {
+          document.getElementById(n).className = "inactive"
+        }
     }
 }
 
