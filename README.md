@@ -6,7 +6,7 @@
 *  Hardware mode switch between colour settings
 *  Supports Homekit via Homebridge
 
-![led-control-panel](https://user-images.githubusercontent.com/1100950/30188844-a25f4af6-93e5-11e7-91b9-a2b1629a84f0.PNG)
+![led-page-125](https://user-images.githubusercontent.com/1100950/30235717-a35707d8-94c0-11e7-8738-b49d1f1450ab.PNG)
 
 **[Status](#status)** |
 **[Hardware Used](#hardware-used)** |
