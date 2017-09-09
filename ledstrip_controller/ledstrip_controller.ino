@@ -111,9 +111,7 @@ void setup() {
       //useful to make it all retry or go to sleep
       //in seconds
       wifiManager.setTimeout(120);
-    
-      //WITHOUT THIS THE AP DOES NOT SEEM TO WORK PROPERLY WITH SDK 1.5 , update to at least 1.5.1
-      WiFi.mode(WIFI_STA);
+      
     
       if (!wifiManager.startConfigPortal(PORTAL_AP_NAME)) {
         Serial.println("Failed to connect and hit timeout");
@@ -131,9 +129,16 @@ void setup() {
       server.begin();
   } else {
       //Serial.println("No Double Reset Detected");
-  }
 
-  server.begin();  //Start the server
+      /*
+      *  "delete the AP config complete form the espressif config memory."
+      *  https://github.com/esp8266/Arduino/issues/676
+      *  If for some reason, the AP config portal remains open.
+      */
+      WiFi.softAPdisconnect(true); 
+      server.begin();  //Start the server
+  }
+  
   SPIFFS.begin();
   //Serial.println("Server listening");
   
