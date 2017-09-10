@@ -12,6 +12,7 @@
 **[Hardware Used](#hardware-used)** |
 **[Libraries](#libraries)** |
 **[HomeKit](#homekit)** |
+**[Examples](#examples)** |
 **[License](#license)**
 
 ## Status
