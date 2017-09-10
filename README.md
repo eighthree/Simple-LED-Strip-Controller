@@ -39,13 +39,20 @@ _* You can use any Wifi-capable Arduino, your mileage may vary_
 * ESP8266WebServer.h, https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
 * DoubleResetDetector.h>, https://github.com/datacute/DoubleResetDetector/
 * Google Material Icons, https://material.io/icons/
-* JSColor 2.0.4 http://jscolor.com/
+* JSColor 2.0.4, http://jscolor.com/
+
+_* FastLED should work as well but is not tested._
 
 ## HomeKit
 Install https://github.com/nfarina/homebridge on a Raspberry Pi or similar and
 install this accessory https://github.com/metbosch/homebridge-http-rgb-bulb
 
-_* FastLED should work as well but is not tested._
+## Examples
+
+### Colour Sensor to LED Strip (Micropython)
+_examples/rgb_sensor_example.py_
+* Capture object RGB value and update LED strip via HTTP GET
+* Tested on Micropython 1.9.2 running on a NodeMCU 1.0
 
 ## License
 This code is public domain. You can redistribute it and/or modify it under the terms of the
