@@ -1,7 +1,7 @@
 ''' 
 Simple LED Strip Controller 1.2.5 - Example Use #1: 
 Micropython 1.9.2 - Colour Sensor to LED Strip
-Date: September 2007
+Date: September 2017
 Description: Capture object RGB value and update LED strip via HTTP GET
 
 Hardware Used:
