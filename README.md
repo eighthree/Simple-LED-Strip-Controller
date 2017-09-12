@@ -49,11 +49,17 @@ Install https://github.com/nfarina/homebridge on a Raspberry Pi or similar and
 install this accessory https://github.com/metbosch/homebridge-http-rgb-bulb
 
 ## Examples
+Expand on the light's functionality by using the LED strip as a visual notification tool.
 
-### Colour Sensor to LED Strip (Micropython)
+#### Colour Sensor to LED Strip (Micropython)
 _examples/rgb_sensor_example.py_
 * Capture object RGB value and update LED strip via HTTP GET
 * Tested on Micropython 1.9.2 running on a NodeMCU 1.0
+
+#### MAX4466 "Washer/Dryer" Notification (Arduino)
+_examples/mic_sensor_example/mic_sensor_example.ino_
+* Sample ambient sound and update LED strip via HTTP GET when washer/dryer is done
+* Tested on Arduino 1.8.3 running on a NodeMCU 1.0
 
 ## License
 This code is public domain. You can redistribute it and/or modify it under the terms of the
