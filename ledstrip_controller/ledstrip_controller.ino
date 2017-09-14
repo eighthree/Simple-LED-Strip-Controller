@@ -1,4 +1,4 @@
-/*  Simple LED Strip Controller 1.2.5
+/*  Simple LED Strip Controller 1.2.6
  *  Author: Timothy Garcia (http://timothygarcia.ca)
  *  Date: September 2017
  *  
@@ -25,13 +25,16 @@
  *  by the Free Software Foundation.  <http://www.gnu.org/licenses/>.
  *  Certain libraries used may be under a different license.
 */ 
+#include "FS.h"                    //this needs to be first, or it all crashes and burns...
+
 #include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
-#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
-#include <DNSServer.h>            //https://github.com/esp8266/Arduino/tree/master/libraries/DNSServer
+
 #include <Adafruit_NeoPixel.h>    //https://github.com/adafruit/Adafruit_NeoPixel
-#include <ESP8266WebServer.h>     //https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
 #include <DoubleResetDetector.h>  //https://github.com/datacute/DoubleResetDetector/
-#include "FS.h"                   //used for SPIFF
+
+#include <DNSServer.h>            //https://github.com/esp8266/Arduino/tree/master/libraries/DNSServer
+#include <ESP8266WebServer.h>     //https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
+#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
 
 // Neopixel Setup
 #define PIN D6
@@ -44,6 +47,7 @@
 
 // AP Setup
 #define PORTAL_AP_NAME "VULPEioNMCU1"     // Set Portal Name
+#define PORTAL_AP_PW "password"           // Set Portal Password
 
 // Mode Switch Setup
 uint8_t TRIGGER_PIN = D1;           // Placeholder Trigger Pin
@@ -71,6 +75,11 @@ const long interval = 20;
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
 ESP8266WebServer server(80);      // ESP8266 Web Server Port: Default 80
 DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
+
+//default custom static IP
+char static_ip[16] = "1.1.1.1";    // Default Static IP
+char static_gw[16] = "1.1.1.1";   // Default Gateway IP
+char static_sn[16] = "255.255.255.0";   // Default Subnet
 
 // Server SPIFFS
 // upload files from /data folder
@@ -112,8 +121,14 @@ void setup() {
       //in seconds
       wifiManager.setTimeout(120);
       
-    
-      if (!wifiManager.startConfigPortal(PORTAL_AP_NAME)) {
+      IPAddress _ip,_gw,_sn;
+      _ip.fromString(static_ip);
+      _gw.fromString(static_gw);
+      _sn.fromString(static_sn);
+      
+      wifiManager.setSTAStaticIPConfig(_ip, _gw, _sn);
+      
+      if (!wifiManager.startConfigPortal(PORTAL_AP_NAME, PORTAL_AP_PW)) {
         Serial.println("Failed to connect and hit timeout");
         delay(3000);
         //reset and try again, or maybe put it to deep sleep
@@ -127,8 +142,10 @@ void setup() {
 
       // Restart Server
       server.begin();
+      Serial.println("local ip");
+      Serial.println(WiFi.localIP());
   } else {
-      //Serial.println("No Double Reset Detected");
+      Serial.println("No Double Reset Detected");
 
       /*
       *  "delete the AP config complete form the espressif config memory."
