@@ -1,4 +1,4 @@
-# Simple LED Strip Controller 1.2.5
+# Simple LED Strip Controller 1.2.7-n
 
 *  Control an LED light strip via a web browser
 *  Allow configuration of device wifi settings via AP
@@ -8,15 +8,9 @@
 
 ![led-page-125](https://user-images.githubusercontent.com/1100950/30235717-a35707d8-94c0-11e7-8738-b49d1f1450ab.PNG)
 
-**[Status](#status)** |
-**[Hardware Used](#hardware-used)** |
-**[Libraries](#libraries)** |
-**[HomeKit](#homekit)** |
-**[Examples](#examples)** |
-**[License](#license)**
+**[Status](#status)** | **[Network Branch](#network)**
 
 ## Status
-
 This project is in progress.
 
 ## Hardware Used

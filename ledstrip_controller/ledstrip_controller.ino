@@ -1,4 +1,4 @@
-/*  Simple LED Strip Controller 1.2.7
+/*  Simple LED Strip Controller 1.2.7-n
  *  Author: Timothy Garcia (http://timothygarcia.ca)
  *  Date: September 2017
  *  
@@ -22,32 +22,25 @@
  *  by the Free Software Foundation.  <http://www.gnu.org/licenses/>.
  *  Certain libraries used may be under a different license.
 */ 
+// System
 #include "FS.h"                    //this needs to be first, or it all crashes and burns...
+#include <DoubleResetDetector.h>  //https://github.com/datacute/DoubleResetDetector/
 
+// LED
+#include <Adafruit_NeoPixel.h>    //https://github.com/adafruit/Adafruit_NeoPixel
+
+// Network
+#include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
+#include <ESP8266WebServer.h>     //https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
+#include <ESP8266mDNS.h>
+#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
+#include <DNSServer.h>            //https://github.com/esp8266/Arduino/tree/master/libraries/DNSServer
+
+// Sensors
 #include <DHT.h>                   // Optional enclosure DHT sensor for humidity and temperature
 #include <DHT_U.h>
 
-#include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
-
-#include <Adafruit_NeoPixel.h>    //https://github.com/adafruit/Adafruit_NeoPixel
-#include <DoubleResetDetector.h>  //https://github.com/datacute/DoubleResetDetector/
-
-#include <DNSServer.h>            //https://github.com/esp8266/Arduino/tree/master/libraries/DNSServer
-#include <ESP8266WebServer.h>     //https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
-#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
-#include <ESP8266mDNS.h>
-
-// Temperature Sensor
-#define DHTPIN D6
-#define DHTTYPE DHT11
-DHT dht(DHTPIN, DHTTYPE);
-
-// Neopixel Setup
-#define PIN D4
-#define NUM_LEDS 92
-#define BRIGHTNESS 20
-
-// DRD Setup
+// Double Reset Detector Setup
 #define DRD_TIMEOUT 10         // Number of seconds after reset during which a subseqent reset will be considered a double reset.
 #define DRD_ADDRESS 0           // RTC Memory Address for the DoubleResetDetector to use
 
@@ -62,6 +55,17 @@ uint8_t TRIGGER_PIN = D1;           // Placeholder Trigger Pin
 uint8_t val;                        // variable for reading the pin status
 uint8_t val2;                       // variable for reading the delayed status
 uint8_t buttonState;                // variable to hold the button state
+
+// Temperature Sensor
+#define DHTPIN D6
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+float humidity, temperature, farenheight, heatf, heatc;
+
+// Neopixel Setup
+#define PIN D4
+#define NUM_LEDS 92
+#define BRIGHTNESS 10
 
 // For LED animations that loop/cycle
 uint8_t LED_STATE = 0;
@@ -84,16 +88,12 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800)
 ESP8266WebServer server(80);      // ESP8266 Web Server Port: Default 80
 DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
 
-//default custom static IP
-char static_ip[16] = "STATIC_IP";    // Default Static IP
-char static_gw[16] = "GATEWAY_IP";   // Default Gateway IP
-char static_sn[16] = "255.255.255.0";   // Default Subnet
-
 // Server SPIFFS
 // upload files from /data folder
 // follow instructions here:
 // http://esp8266.github.io/Arduino/versions/2.0.0-rc2/doc/filesystem.html#uploading-files-to-file-system
 // Un-compressed files are available in their respective css/js folders.
+
 String getContentType(String filename); // convert the file extension to the MIME type
 bool handleFileRead(String path);       // send the right file to the client (if it exists)
 
@@ -106,27 +106,18 @@ void setup() {
   pinMode(TRIGGER_PIN, INPUT);
   pinMode(LED_BUILTIN, OUTPUT);
 
-  strip.begin();              // Start neopixels
-  strip.setBrightness(BRIGHTNESS);     // Set brightness for strip to 5, prevents drawing too much power.
-  strip.show();               // Initialize all pixels to 'off'
+  strip.begin();                        // Start neopixels
+  strip.setBrightness(BRIGHTNESS);      // Set brightness for strip to 5, prevents drawing too much power.
+  strip.show();                         // Initialize all pixels to 'off'
 
-    IPAddress _ip,_gw,_sn;
-  _ip.fromString(static_ip);
-  _gw.fromString(static_gw);
-  _sn.fromString(static_sn);
-      
   if (drd.detectDoubleReset()) { // Check for double reset flag on setup
-      //Serial.println("Double Reset Detected");
     
       digitalWrite(LED_BUILTIN, LOW);
     
-      //Serial.println("\n Configuration Portal Requested, Control Server Stopping");
-
-      // Stop serving port 80
-      server.stop();
+      Serial.println("\n Configuration Portal Requested, Control Server Stopping");
+      
+      server.stop();                    // Stop serving port 80
     
-      //WiFiManager
-      //Local intialization. Once its business is done, there is no need to keep it around
       WiFiManager wifiManager;
       wifiManager.setAPCallback(configModeCallback);
 
@@ -134,10 +125,6 @@ void setup() {
       //useful to make it all retry or go to sleep
       //in seconds
       wifiManager.setTimeout(120);
-      
-
-      
-      wifiManager.setSTAStaticIPConfig(_ip, _gw, _sn);
       
       if (!wifiManager.startConfigPortal(PORTAL_AP_NAME, PORTAL_AP_PW)) {
         Serial.println("Failed to connect and hit timeout");
@@ -147,26 +134,22 @@ void setup() {
         delay(5000);
       }
 
-      //Serial.println("Connected to Wireless AP.");  // If you get here you have connected to the WiFi
-      //Serial.println("IP address: ");
-      //Serial.println(WiFi.localIP());               //Print the local IP
-
-      // Restart Server
-      server.begin();
-
   } else {
       Serial.println("No Double Reset Detected");
-      WiFi.config(_ip, _gw, _sn);
-
-        if (!MDNS.begin("ledcommander")) {
-          Serial.println("Error setting up MDNS responder!");
-          while(1) { 
-            delay(1000);
-          }
-        }
-      Serial.println("mDNS responder started");
-      server.begin();  //Start the server
+      WiFi.mode(WIFI_STA);
   }
+
+
+   if (!MDNS.begin("deskstrip")) {
+    Serial.println("Error setting up MDNS responder!");
+      while(1) { 
+        delay(1000);
+      }
+    }
+  Serial.println("mDNS responder started");
+  
+  Serial.println("local ip");
+  Serial.println(WiFi.localIP());
   
   Serial.println("local ip");
   Serial.println(WiFi.localIP());
@@ -207,6 +190,7 @@ void setup() {
   // Built for use with something like this:
   // https://github.com/metbosch/homebridge-http-rgb-bulb
   server.on("/rgb", handleGenericArgs); //Associate the handler function to the path
+  server.begin();  //Start the server
   MDNS.addService("http", "tcp", 80);
 }
 
@@ -284,11 +268,11 @@ void loop() {
 
     switch(LED_STATE) {
       case 1: {
-          colorWipe(strip.Color(R_LED,G_LED,B_LED), 50);
+          colorWipe(strip.Color(R_LED,G_LED,B_LED), 20);
           break;
       }
       case 2: {
-          colorWipe(strip.Color(255, 0, 0), 50);
+          colorWipe(strip.Color(255, 0, 0), 20);
           break;
       }
       case 3: {
@@ -299,7 +283,7 @@ void loop() {
             }              
           break; }
       case 4: {
-          CylonBounce(0xff, 0, 0, 5, 10, 50);
+          CylonBounce(0xff, 0, 0, 5, 10, 20);
           break;
       }
       case 5: {
@@ -311,27 +295,27 @@ void loop() {
           break;
       }
       case 7: {
-          colorWipe(strip.Color(255, 108, 0), 50);
+          colorWipe(strip.Color(255, 108, 0), 20);
            break;
       }
       case 8: {
-          theaterChase(strip.Color(127, 127, 127), 50);
+          theaterChase(strip.Color(127, 127, 127), 20);
           break;
       }
       case 9: {
-          colorWipe(strip.Color(0, 0, 255), 50);
+          colorWipe(strip.Color(0, 0, 255), 20);
            break;
       }
       case 10: {
-          colorWipe(strip.Color(0, 255, 0), 50);
+          colorWipe(strip.Color(0, 255, 0), 20);
            break;
       }
       case 11: {
-          colorWipe(strip.Color(80, 0, 200), 50);
+          colorWipe(strip.Color(80, 0, 200), 20);
           break;
       }
       case 0: {
-          colorWipe(strip.Color(0, 0, 0), 50);
+          colorWipe(strip.Color(0, 0, 0), 20);
           break;
       }
       case 255:{
@@ -432,7 +416,7 @@ String currentHEX = String(currentRGB, HEX);
 
 // Server Control Paths
 void handleRootPath(uint8_t activeButton) {           
-  String content = "<html><head><title>" + String(PORTAL_AP_NAME) + "</title>";
+  String content = "<html><head><title>Control Panel: " + String(PORTAL_AP_NAME) + "</title>";
   
   // Base 64 encoded favicon
   content += "<link rel=\"shortcut icon\" href=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAkCAYAAADhAJiYAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAK7OHOkAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAZiS0dEAAAAAAAA+UO7fwAAAAlwSFlzAAAASAAAAEgARslrPgAAAeBJREFUWMPt179qFFEUBvCfGq1iI0bU3Yg2guAbKGhs1Sj49wEk2Jg+3XZqaadgJT6BsNgYxGUD+ggqWOiagF20M+6uxcyQ48JsZmcGArIfDHzLPfe73zlzz72zTDFFNeypQeM8zqV8Dd3dTqqFYfq0qort3e1s/itDN7FSYo0V3Kjb+H0MJPvk0chYS/4eysYGWK7LzN1gZoivOFrA0HF8D2MD3KpqZh6/gmgXRyao0DG8D+M/0Ry34E576DFmU97DdfyYIKENLGI9/X0QD8tW5yT+hOwu5MSNq1CGhRCzhRNlKnQb+1L+Ae/KZoa3WE35TKo9saFLgT+rYCbDyxztwobOBt6pwdBajnZhQ4cD79Vg6Fvgc2UMbQW+vwZDBwL/nRc0M0ZgHadT3sDHnLiu5HjIeB4agW+Uyei17Va9V0OFloJeOy9o3CuLk+7UYChqtMsIzCt2MBbB6MHYLCv0PAh98W/nFcUhfA46TyskpiG5EDOxTrrAJGY6Yf6m5MKthEX0g+gnXCwwb2GkMn1crWomw/KIqSHeSDrnjOSLYDblS5J7K8b28aAuM7FS8fUVfTZxpW4zGebwRNIpOxnp44UJ90zZP4pNXMNlnLLdxj1JN7bxSj134BRTTFEr/gJjkZYrYDLmgAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAxNy0wOS0wN1QwMjoxMTo1MyswMDowMAsCEWsAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMTctMDktMDdUMDI6MTE6NTMrMDA6MDB6X6nXAAAAKHRFWHRzdmc6YmFzZS11cmkAZmlsZTovLy90bXAvbWFnaWNrLTdmN3p1bmtNdOrSigAAAABJRU5ErkJggg==\" />";
