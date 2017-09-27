@@ -48,6 +48,8 @@
 #define PORTAL_AP_NAME "VULPEioWemoD1Uno"     // Set Portal Name
 #define PORTAL_AP_PW "password"           // Set Portal Password
 
+float humidity, temperature, farenheight, heatf, heatc;
+
 // Mode Switch Setup
 uint8_t TRIGGER_PIN = D1;           // Placeholder Trigger Pin
 uint8_t val;                        // variable for reading the pin status
@@ -145,6 +147,9 @@ void setup() {
       }
     }
   Serial.println("mDNS responder started");
+  
+  Serial.println("local ip");
+  Serial.println(WiFi.localIP());
   
   Serial.println("local ip");
   Serial.println(WiFi.localIP());
