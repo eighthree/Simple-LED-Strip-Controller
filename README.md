@@ -1,5 +1,4 @@
-# Simple LED Strip Controller 1.2.7-n
-
+# Simple LED Strip Controller 1.2.7
 *  Control an LED light strip via a web browser
 *  Allow configuration of device wifi settings via AP
 *  Serves a light browser-based controller with simple CSS for functionality
@@ -8,23 +7,32 @@
 
 ![led-page-125](https://user-images.githubusercontent.com/1100950/30235717-a35707d8-94c0-11e7-8738-b49d1f1450ab.PNG)
 
-**[Status](#status)** | **[Network Branch](#network)**
+**[Status](#status)** |
+**[Hardware Used](#hardware-used)** |
+**[Libraries](#libraries)** |
+**[HomeKit](#homekit)** |
+**[Examples](#examples)** |
+**[License](#license)**
 
 ## Status
+
 This project is in progress.
 
 ## Hardware Used
 #### Requirements
-* 1x NodeMCU 1.0 (ESP8266) _*_
+* 1x ESP8266 _*_
 * 1x WS2812b/SK6812 LED Strip or "_Neopixel_" LED Strip
 
-_* You can use any Wifi-capable Arduino, your mileage may vary_
+#### Tested On
+* NodeMCU 1.0
+* Wemos D1 R2
 
-#### Optional Components
-* 1x 10k Ω resistor
-* 1x 470 Ω resistor
-* 1x Momentary Switch (for switching modes)
-* 1x 3-pin male header (for LED connections)
+_* You can use any Wi-Fi capable Arduino, your mileage may vary_
+
+#### Hardware Setup
+Adafruit has written a detailed guide on NeoPixels along with
+best practices and code examples: https://learn.adafruit.com/adafruit-neopixel-uberguide/overview
+
 
 ## Libraries
 * ESP8266WiFi, https://github.com/esp8266/Arduino
@@ -32,7 +40,8 @@ _* You can use any Wifi-capable Arduino, your mileage may vary_
 * WiFiManager, https://github.com/tzapu/WiFiManager
 * Adafruit_NeoPixel.h, https://github.com/adafruit/Adafruit_NeoPixel _*_
 * ESP8266WebServer.h, https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
-* DoubleResetDetector.h>, https://github.com/datacute/DoubleResetDetector/
+* ESP8266mDNS.h, https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266mDNS
+* DoubleResetDetector.h, https://github.com/datacute/DoubleResetDetector/
 * Google Material Icons, https://material.io/icons/
 * JSColor 2.0.4, http://jscolor.com/
 
@@ -42,8 +51,21 @@ _* FastLED should work as well but is not tested._
 Install https://github.com/nfarina/homebridge on a Raspberry Pi or similar and
 install this accessory https://github.com/metbosch/homebridge-http-rgb-bulb
 
+The address for the LED strip is deskstrip.local, you should probably change
+this to something else if you are planning to have more than one installation.
+
+### Sample Homebridge Accessory Config
+`{
+ "set_url": "http://deskstrip.local/rgb?color=0x%s",
+ "get_url": "http://deskstrip.local/rgb?format=hex",
+ "http_method": "GET",
+ "manufacturer": "github.com/eighthree",
+ "model": "Simple LED Strip",
+ "serial": "VULPEio-001"
+}`
+
 ## Examples
-Expand on the light's functionality by using the LED strip as a visual notification tool.
+Expand functionality by using the LED strip as a visual notification tool.
 
 #### Colour Sensor to LED Strip (Micropython)
 _examples/rgb_sensor_example.py_
