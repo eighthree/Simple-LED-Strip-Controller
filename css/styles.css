@@ -176,3 +176,29 @@ button:hover {
     text-align: center;
     font-size: 2.5em;
 }
+
+ul.temperature {
+    margin: 15px auto;
+    display: flex;
+    flex-wrap: wrap;
+    list-style: none;
+    border-radius: 15px;
+    background: #fff;
+    overflow: hidden;
+}
+ul.temperature li h3 {
+    font-size: .4em;
+    display: block;
+    padding: 10px 0 0px 0; margin: 5px;
+}
+ul.temperature li {
+    background: #fff;
+    width: 33.33%;
+    font-size: 2em;
+    text-align: center;
+    padding: 0px 0px 10px 0px;
+}
+
+ul.temperature li:hover {
+    color: #c0c0c0;
+}

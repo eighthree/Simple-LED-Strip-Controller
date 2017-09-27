@@ -1,4 +1,4 @@
-# Simple LED Strip Controller 1.2.6
+# Simple LED Strip Controller 1.2.5
 
 *  Control an LED light strip via a web browser
 *  Allow configuration of device wifi settings via AP
@@ -24,7 +24,7 @@ This project is in progress.
 * 1x NodeMCU 1.0 (ESP8266) _*_
 * 1x WS2812b/SK6812 LED Strip or "_Neopixel_" LED Strip
 
-_* You can use any Wifi-capable Arduino-compatible board, your mileage may vary_
+_* You can use any Wifi-capable Arduino, your mileage may vary_
 
 #### Optional Components
 * 1x 10k Ω resistor
@@ -47,8 +47,6 @@ _* FastLED should work as well but is not tested._
 ## HomeKit
 Install https://github.com/nfarina/homebridge on a Raspberry Pi or similar and
 install this accessory https://github.com/metbosch/homebridge-http-rgb-bulb
-
-Make sure to configure & set up a static IP to ensure reliability when using this functionality.
 
 ## Examples
 Expand on the light's functionality by using the LED strip as a visual notification tool.

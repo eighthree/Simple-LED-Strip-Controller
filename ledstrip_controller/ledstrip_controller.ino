@@ -1,4 +1,4 @@
-/*  Simple LED Strip Controller 1.2.6
+/*  Simple LED Strip Controller 1.2.7
  *  Author: Timothy Garcia (http://timothygarcia.ca)
  *  Date: September 2017
  *  
@@ -8,9 +8,6 @@
  *  Serves a light browser-based controller with simple CSS for functionality
  *  Hardware mode switch between colour settings
  *  Supports Homekit via Homebridge https://github.com/nfarina/homebridge with https://github.com/metbosch/homebridge-http-rgb-bulb
- *  
- *  Hardware Used:
- *  NodeMCU 1.0 / 10K Ohm Resistor / 470 Ohm Resistor / Momentary Switch / Protoype Board / 3-pin header (for LED)
  *  
  *  Extra Credits:
  *  Adafruit Industries www.adafruit.com
@@ -27,6 +24,9 @@
 */ 
 #include "FS.h"                    //this needs to be first, or it all crashes and burns...
 
+#include <DHT.h>                   // Optional enclosure DHT sensor for humidity and temperature
+#include <DHT_U.h>
+
 #include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
 
 #include <Adafruit_NeoPixel.h>    //https://github.com/adafruit/Adafruit_NeoPixel
@@ -35,19 +35,27 @@
 #include <DNSServer.h>            //https://github.com/esp8266/Arduino/tree/master/libraries/DNSServer
 #include <ESP8266WebServer.h>     //https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
 #include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
+#include <ESP8266mDNS.h>
+
+// Temperature Sensor
+#define DHTPIN D6
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
 
 // Neopixel Setup
-#define PIN D6
-#define NUM_LEDS 29
-#define BRIGHTNESS 5
+#define PIN D4
+#define NUM_LEDS 92
+#define BRIGHTNESS 20
 
 // DRD Setup
 #define DRD_TIMEOUT 10         // Number of seconds after reset during which a subseqent reset will be considered a double reset.
 #define DRD_ADDRESS 0           // RTC Memory Address for the DoubleResetDetector to use
 
 // AP Setup
-#define PORTAL_AP_NAME "VULPEioNMCU1"     // Set Portal Name
+#define PORTAL_AP_NAME "VULPEioWemoD1Uno"     // Set Portal Name
 #define PORTAL_AP_PW "password"           // Set Portal Password
+
+float humidity, temperature, farenheight, heatf, heatc;
 
 // Mode Switch Setup
 uint8_t TRIGGER_PIN = D1;           // Placeholder Trigger Pin
@@ -77,8 +85,8 @@ ESP8266WebServer server(80);      // ESP8266 Web Server Port: Default 80
 DoubleResetDetector drd(DRD_TIMEOUT, DRD_ADDRESS);
 
 //default custom static IP
-char static_ip[16] = "1.1.1.1";    // Default Static IP
-char static_gw[16] = "1.1.1.1";   // Default Gateway IP
+char static_ip[16] = "STATIC_IP";    // Default Static IP
+char static_gw[16] = "GATEWAY_IP";   // Default Gateway IP
 char static_sn[16] = "255.255.255.0";   // Default Subnet
 
 // Server SPIFFS
@@ -93,6 +101,8 @@ void setup() {
   Serial.begin(115200);
   Serial.println("\n Starting");
 
+  dht.begin();
+
   pinMode(TRIGGER_PIN, INPUT);
   pinMode(LED_BUILTIN, OUTPUT);
 
@@ -100,7 +110,11 @@ void setup() {
   strip.setBrightness(BRIGHTNESS);     // Set brightness for strip to 5, prevents drawing too much power.
   strip.show();               // Initialize all pixels to 'off'
 
-  
+    IPAddress _ip,_gw,_sn;
+  _ip.fromString(static_ip);
+  _gw.fromString(static_gw);
+  _sn.fromString(static_sn);
+      
   if (drd.detectDoubleReset()) { // Check for double reset flag on setup
       //Serial.println("Double Reset Detected");
     
@@ -121,10 +135,7 @@ void setup() {
       //in seconds
       wifiManager.setTimeout(120);
       
-      IPAddress _ip,_gw,_sn;
-      _ip.fromString(static_ip);
-      _gw.fromString(static_gw);
-      _sn.fromString(static_sn);
+
       
       wifiManager.setSTAStaticIPConfig(_ip, _gw, _sn);
       
@@ -142,19 +153,23 @@ void setup() {
 
       // Restart Server
       server.begin();
-      Serial.println("local ip");
-      Serial.println(WiFi.localIP());
+
   } else {
       Serial.println("No Double Reset Detected");
+      WiFi.config(_ip, _gw, _sn);
 
-      /*
-      *  "delete the AP config complete form the espressif config memory."
-      *  https://github.com/esp8266/Arduino/issues/676
-      *  If for some reason, the AP config portal remains open.
-      */
-      WiFi.softAPdisconnect(true); 
+        if (!MDNS.begin("ledcommander")) {
+          Serial.println("Error setting up MDNS responder!");
+          while(1) { 
+            delay(1000);
+          }
+        }
+      Serial.println("mDNS responder started");
       server.begin();  //Start the server
   }
+  
+  Serial.println("local ip");
+  Serial.println(WiFi.localIP());
   
   SPIFFS.begin();
   //Serial.println("Server listening");
@@ -192,7 +207,7 @@ void setup() {
   // Built for use with something like this:
   // https://github.com/metbosch/homebridge-http-rgb-bulb
   server.on("/rgb", handleGenericArgs); //Associate the handler function to the path
-  
+  MDNS.addService("http", "tcp", 80);
 }
 
 void loop() {
@@ -324,7 +339,8 @@ void loop() {
         break;
       }
     }
-    
+
+    temperatureUpdate();
     server.handleClient();  
   
     // Call the double reset detector loop method every so often,
@@ -332,9 +348,34 @@ void loop() {
     // You can also call drd.stop() when you wish to no longer
     // consider the next reset as a double reset.
     drd.loop();
-
 }
 
+void temperatureUpdate() {
+    // Reading temperature or humidity takes about 250 milliseconds!
+    // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+    float h = dht.readHumidity();
+    // Read temperature as Celsius (the default)
+    float t = dht.readTemperature();
+    // Read temperature as Fahrenheit (isFahrenheit = true)
+    float f = dht.readTemperature(true);
+  
+    // Check if any reads failed and exit early (to try again).
+    if (isnan(h) || isnan(t) || isnan(f)) {
+      Serial.println("Failed to read from DHT sensor!");
+      return;
+    }
+  
+    // Compute heat index in Fahrenheit (the default)
+    float hif = dht.computeHeatIndex(f, h);
+    // Compute heat index in Celsius (isFahreheit = false)
+    float hic = dht.computeHeatIndex(t, h, false);
+
+    humidity = h;
+    temperature = t;
+    farenheight = f;
+    heatf = hif;
+    heatc = hic;
+}
 
 // Callback for AP Setup
 void configModeCallback (WiFiManager *myWiFiManager) {
@@ -430,6 +471,7 @@ void handleRootPath(uint8_t activeButton) {
   content += "<input class=\"jscolor {hash:true, width:400, height:250 ,borderColor:'#000', insetColor:'#FFF', backgroundColor:'#000'}\" onchange=\"update(jscolor);makeAjaxCall('/rgb?color=0x' +  this.jscolor)\" value=\"#FFFFFF\">";
   content += "</div>";
 
+  
   // Container for the "Remote Control" style buttons
   content += "<div class=\"controller\">";
 
@@ -444,8 +486,13 @@ void handleRootPath(uint8_t activeButton) {
   } 
   content += "</div>";
 
+    // Temperature
+  content += "<ul class=\"temperature\">";
+  content += "<li id=\"humidity\"><h3>Humidity</h3>" + String(humidity) + "</li><li id=\"temperature\"><h3>Temperature</h3>" +  String(temperature) + "</li><li id=\"temperature\"><h3>Heat Index</h3>" +  String(heatc) + "</li>";
+  content += "</ul>";
+
   // Footnote
-  content += "<div class=\"footnote\">&nbsp; Simple LED Strip Controller Version 1.2.5 <br/><a href=\"https://github.com/eighthree/Simple-LED-Strip-Controller\" target=\"_new\">View Project on Github</a><br/></div>";
+  content += "<div class=\"footnote\">&nbsp; Simple LED Strip Controller Version 1.2.7 <br/><a href=\"https://github.com/eighthree/Simple-LED-Strip-Controller\" target=\"_new\">View Project on Github</a><br/></div>";
 
   // JS for ajax request & button toggles
   content += "<script src=\"script.min.js\"></script>";
