@@ -1,4 +1,3 @@
-// Ajax Call
 function makeAjaxCall(e) {
     var t = new XMLHttpRequest;
     t.onreadystatechange = function() {
@@ -6,33 +5,23 @@ function makeAjaxCall(e) {
     }, t.open("GET", e, !0), t.send()
 }
 
-// Change button class to match it's ID
 function changeClass() {
-    for (var t = document.getElementsByTagName("button"), e = 0; e < t.length; e++) {
-        var n = t[e].getAttribute("id");
+    for (var e = document.getElementsByTagName("button"), t = 0; t < e.length; t++) {
+        var n = e[t].getAttribute("id");
         this.getAttribute("id") == n ? document.getElementById(n).className = n : document.getElementById(n).className = "inactive"
     }
 }
 
-// Updates buttons to reflect change
-function update(jscolor) {
-    document.getElementById('on').className = "on";
-    document.getElementById('off').className = "inactive";
-    document.getElementById('on').style.backgroundColor = '#' + jscolor;
-
-    for (var t = document.getElementsByTagName("button"), e = 0; e < t.length; e++) {
-        var n = t[e].getAttribute("id");
-        if(n != "on")
-        {
-          document.getElementById(n).className = "inactive"
-        }
+function update(e) {
+    document.getElementById("on").className = "on", document.getElementById("off").className = "inactive", document.getElementById("on").style.backgroundColor = "#" + e;
+    for (var t = document.getElementsByTagName("button"), n = 0; n < t.length; n++) {
+        var a = t[n].getAttribute("id");
+        "on" != a && (document.getElementById(a).className = "inactive")
     }
 }
-
-// Add event listeners to each button on the page
 window.onload = function() {
-    for (var t = document.getElementsByTagName("button"), e = 0; e < t.length; e++) {
-        var n = t[e].getAttribute("id");
+    for (var e = document.getElementsByTagName("button"), t = 0; t < e.length; t++) {
+        var n = e[t].getAttribute("id");
         document.getElementById(n).addEventListener("click", changeClass)
     }
 };
