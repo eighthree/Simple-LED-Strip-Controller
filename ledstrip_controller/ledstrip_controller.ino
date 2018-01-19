@@ -1,7 +1,7 @@
 /*
-  LED Strip Controller 2.0
+  LED Strip Controller 2.0.1
   Author: Timothy Garcia 
-  Date: September 2017
+  Date: January 2018
 
   Description:
   Control an LED Light Strip via a web browser
@@ -22,6 +22,13 @@
 */
 
 /*-----------------------*/
+/*
+  See: https://github.com/esp8266/Arduino/issues/1923
+*/
+#define HEAPCHECKER 1        // set to 1 to test HEAP loss fix
+#ifdef HEAPCHECKER
+  #include "lwip/tcp_impl.h" // losing bytes work around
+#endif
 
 /* File System/Hardware */
 #include "FS.h"
@@ -45,16 +52,8 @@ const char *index_html =
 int timezone = 3;
 int dst = 0;
 
-/* Sensors / Optional */
-#include <DHT.h>
-#include <DHT_U.h>
-
 /*-----------------------*/
 
-/* Sensor */
-#define DHTPIN D6
-#define DHTTYPE DHT11
-DHT dht(DHTPIN, DHTTYPE);
 
 /* LED Strip */
 #define LED_PIN D4
@@ -88,6 +87,11 @@ uint8_t G_LED = 0;
 uint8_t B_LED = 0;
 
 String modes = "";
+
+// Run TCPCleanup every minute, Update Interval in milliseconds
+long previousMillis = 0;  
+long interval = 60000; 
+uint32_t originalram;
 
 /*-----------------------*/
 
@@ -179,15 +183,40 @@ void setup() {
   delay(1000);
   Serial.println("\nSet Up Complete! Thank you!");
   
+  originalram = ESP.getFreeHeap();
+  Serial.println("Heap on Startup: " + originalram);
 }
 
+
 void loop() {
+  drd.loop();
+  unsigned long currentMillis = millis();
+  uint32_t ram = ESP.getFreeHeap();
+  
   // put your main code here, to run repeatedly:
   ws2812fx.service();
   server.handleClient();  
-  drd.loop();
+
+  // losing bytes work around
+  if(HEAPCHECKER && currentMillis - previousMillis > interval){          
+    tcpCleanup();           
+    Serial.printf("tcpCleanup completed\n");
+    previousMillis = currentMillis;
+    Serial.printf("RAM: %d  change %d\n", ram, (ram - originalram ));
+    
+  }
+
+
 }
 
+/* https://github.com/esp8266/Arduino/issues/1532#issuecomment-176869292 */
+void tcpCleanup()
+{
+  while(tcp_tw_pcbs!=NULL)
+  {
+    tcp_abort(tcp_tw_pcbs);
+  }
+}
 
 /* Callback for AP Setup */
 void configModeCallback (WiFiManager *myWiFiManager) {
@@ -203,6 +232,7 @@ void srv_handle_index_html() {
   time_t now = time(nullptr);
   Serial.println(ctime(&now));
   Serial.println("HTTP: Index Served");
+  Serial.println(ESP.getFreeHeap());
 }
 
 /* 
