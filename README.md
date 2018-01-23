@@ -16,7 +16,13 @@
 
 ## Status
 
-* This project is in progress.
+#### 2.0
+* Uses websockets
+* Minimized SPIFF use, embeds minified CSS/JS
+* New web interface
+* 1.0x random crashes and reboots should no longer happen (yay!)
+* Exposes all WS2812FX library modes
+* Backwards compatible with previous homebridge support
 
 ## Hardware
 #### Requirements
@@ -26,7 +32,6 @@
 #### Tested On
 * NodeMCU 1.0
 * Wemos D1 R2
-
 
 #### Hardware Setup
 Adafruit has written a detailed guide on NeoPixels along with
@@ -49,6 +54,10 @@ best practices and code examples: https://learn.adafruit.com/adafruit-neopixel-u
 * JSColor 2.0.4, http://jscolor.com/
 * WS2812FX https://github.com/kitesurfer1404/WS2812FX
 * Standard Libraries: time.h, FS.h
+
+This project is a light weight LED Strip controller.
+Want multi-client, MQTT, OTA support? Check out/support this excellent project:
+* https://github.com/toblum/McLighting/
 
 
 ## HomeKit
