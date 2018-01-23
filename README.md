@@ -1,24 +1,30 @@
-# Simple LED Strip Controller 1.2.7
+# Simple LED Strip Controller 2.0
 *  Control an LED light strip via a web browser
 *  Allow configuration of device wifi settings via AP
 *  Serves a light browser-based controller with simple CSS for functionality
-*  Hardware mode switch between colour settings
 *  Supports Homekit via Homebridge
+*  WS2812FX Library for led animations &amp; control
 
-![led-page-125](https://user-images.githubusercontent.com/1100950/30235717-a35707d8-94c0-11e7-8738-b49d1f1450ab.PNG)
+![Controller Dashboard](/screenshots/v2.PNG?raw=true "Version 2.0")
 
 **[Status](#status)** |
-**[Hardware Used](#hardware-used)** |
-**[Libraries](#libraries)** |
+**[Hardware](#hardware)** |
+**[Software Setup](#software-setup)** |
 **[HomeKit](#homekit)** |
 **[Examples](#examples)** |
 **[License](#license)**
 
 ## Status
 
-This project is in progress.
+#### 2.0
+* Uses websockets
+* Minimized SPIFF use, embeds minified CSS/JS
+* New web interface
+* 1.0x random crashes and reboots should no longer happen (yay!)
+* Exposes all WS2812FX library modes
+* Backwards compatible with previous homebridge support
 
-## Hardware Used
+## Hardware
 #### Requirements
 * 1x ESP8266 _*_
 * 1x WS2812b/SK6812 LED Strip or "_Neopixel_" LED Strip
@@ -27,25 +33,32 @@ This project is in progress.
 * NodeMCU 1.0
 * Wemos D1 R2
 
-_* You can use any Wi-Fi capable Arduino, your mileage may vary_
-
 #### Hardware Setup
 Adafruit has written a detailed guide on NeoPixels along with
 best practices and code examples: https://learn.adafruit.com/adafruit-neopixel-uberguide/overview
 
+## Software Setup
+* Perform 'ESP8266 Sketch Data Upload' for jscolor
+* Compile and upload sketch
 
-## Libraries
+#### Libraries
 * ESP8266WiFi, https://github.com/esp8266/Arduino
 * DNSServer, https://github.com/esp8266/Arduino/tree/master/libraries/DNSServer
 * WiFiManager, https://github.com/tzapu/WiFiManager
-* Adafruit_NeoPixel.h, https://github.com/adafruit/Adafruit_NeoPixel _*_
 * ESP8266WebServer.h, https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
 * ESP8266mDNS.h, https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266mDNS
+* ArduinoJSON.h, https://github.com/bblanchon/ArduinoJson
 * DoubleResetDetector.h, https://github.com/datacute/DoubleResetDetector/
+* WebSockets.h, https://github.com/Links2004/arduinoWebSockets
 * Google Material Icons, https://material.io/icons/
 * JSColor 2.0.4, http://jscolor.com/
+* WS2812FX https://github.com/kitesurfer1404/WS2812FX
+* Standard Libraries: time.h, FS.h
 
-_* FastLED should work as well but is not tested._
+This project is a light weight LED Strip controller.
+Want multi-client, MQTT, OTA support? Check out/support this excellent project:
+* https://github.com/toblum/McLighting/
+
 
 ## HomeKit
 Install https://github.com/nfarina/homebridge on a Raspberry Pi or similar and
