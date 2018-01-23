@@ -5,7 +5,7 @@
 *  Supports Homekit via Homebridge
 *  WS2812FX Library for led animations &amp; control
 
-![Controller Dashboard](/screenshots/v2.png?raw=true "Version 2.0")
+![Controller Dashboard](/screenshots/v2.PNG?raw=true "Version 2.0")
 
 **[Status](#status)** |
 **[Hardware](#hardware)** |
