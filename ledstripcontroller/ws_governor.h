@@ -28,6 +28,7 @@ void setFX (uint8_t * wsPayload) {
   Serial.println("##################################");
   Serial.println(modeValue);
   CURRENT_MODE = modeValue;
+  
   ws2812fx.setMode(modeValue);
   ws2812fx.start();
 }
@@ -81,7 +82,7 @@ String currentHEX = String(currentRGB, HEX);
 String jsonBuildSettingsList() {
   time_t now = time(nullptr);
 
-  StaticJsonBuffer<200> jsonBuffer;
+  StaticJsonBuffer<300> jsonBuffer;
   JsonObject& settings = jsonBuffer.createObject();
   settings["device_name"] = PORTAL_AP_NAME;
   settings["device_time"] = ctime(&now);
