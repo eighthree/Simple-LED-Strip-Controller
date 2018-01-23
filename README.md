@@ -2,22 +2,23 @@
 *  Control an LED light strip via a web browser
 *  Allow configuration of device wifi settings via AP
 *  Serves a light browser-based controller with simple CSS for functionality
-*  Hardware mode switch between colour settings
 *  Supports Homekit via Homebridge
 *  WS2812FX Library for led animations &amp; control
 
+![Controller Dashboard](/screenshots/v2.png?raw=true "Version 2.0")
+
 **[Status](#status)** |
-**[Hardware Used](#hardware-used)** |
-**[Libraries](#libraries)** |
+**[Hardware](#hardware)** |
+**[Software Setup](#software-setup)** |
 **[HomeKit](#homekit)** |
 **[Examples](#examples)** |
 **[License](#license)**
 
 ## Status
 
-This project is actively being developed.
+* This project is in progress.
 
-## Hardware Used
+## Hardware
 #### Requirements
 * 1x ESP8266 _*_
 * 1x WS2812b/SK6812 LED Strip or "_Neopixel_" LED Strip
@@ -31,17 +32,23 @@ This project is actively being developed.
 Adafruit has written a detailed guide on NeoPixels along with
 best practices and code examples: https://learn.adafruit.com/adafruit-neopixel-uberguide/overview
 
+## Software Setup
+* Perform 'ESP8266 Sketch Data Upload' for jscolor
+* Compile and upload sketch
 
-## Libraries
+#### Libraries
 * ESP8266WiFi, https://github.com/esp8266/Arduino
 * DNSServer, https://github.com/esp8266/Arduino/tree/master/libraries/DNSServer
 * WiFiManager, https://github.com/tzapu/WiFiManager
 * ESP8266WebServer.h, https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer
 * ESP8266mDNS.h, https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266mDNS
+* ArduinoJSON.h, https://github.com/bblanchon/ArduinoJson
 * DoubleResetDetector.h, https://github.com/datacute/DoubleResetDetector/
+* WebSockets.h, https://github.com/Links2004/arduinoWebSockets
 * Google Material Icons, https://material.io/icons/
 * JSColor 2.0.4, http://jscolor.com/
 * WS2812FX https://github.com/kitesurfer1404/WS2812FX
+* Standard Libraries: time.h, FS.h
 
 
 ## HomeKit

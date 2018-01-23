@@ -1,61 +1,569 @@
-body {
-    font-family: 'Roboto', sans-serif;
+
+    body {
+        font-family: 'Nunito', sans-serif;
+        background-color: #efefef;
 }
+/*
+https://codepen.io/thelaazyguy/pen/MvqpPr
+*/
 .container {
-    display: flex;
-    flex-wrap: wrap;
+padding-top: 1.75em;
+width: 100%;
 }
-.container .colour_picker {
-    width: 100%;
-    padding: 0 .5em;
+
+.mode {
+width: 90%;
+margin: 0 auto;
 }
-.container .controller {
-    width: 100%;
-    display: flex;
-    flex-wrap:wrap;
+
+.scenes {
+width: 90%;
+margin: 0 auto;
 }
-.container .footnote {
-    width: 100%;
+
+.settings {
+width: 90%;
+margin: 1em auto;
+background: #FFFFFF;
+padding: 1em 1em;
+box-shadow: 1px 2px 2px 1px rgba(0, 0, 0, .1);
 }
-.controller a {
-    display: block;
-    width: 30%;
-    margin-left: 1em;
-    margin-bottom: 1em;
+
+.footer {
+padding: 1em;
+font-family: Courier New, Courier, monospace;
+font-size: .75em;
+width: 90%;
+margin: 0 auto;
 }
-.controller button {
-    width: 100%;
-    border: 0px;
-    border-radius:15em;
-    font-size: 1em;
-    overflow: hidden;
+
+.custom_input, .header {
+width: 90%;
+margin: 0 auto;
+display: flex;
+flex-wrap: wrap;
+justify-content: space-between;
 }
-.controller button:hover {
-    background: #000;
-    color: #fff;
-    cursor: pointer;
+
+
+ol#scene_list, ol#mode_list {
+display: flex;
+list-style-type: none;
+justify-content: space-around;
+padding: 0;
+flex-wrap: wrap;
 }
-.category {
-    display: flex;
-    width: 100%;
-    flex-wrap: wrap;
-    border-bottom: 1px solid #efefef;
-    padding: 10px;
+
+
+
+ol#mode_list li, ol#scene_list li {
+padding: 0 1em 2em 0;
+align-items: stretch;
 }
-.category h1 {
-    width: 100%;
+
+ol#mode_list li button, ol#scene_list li button {
+font-family: 'Nunito', sans-serif;
+font-weight: bold;
+margin: 0 auto;
+width: 9em;
+height: 9em;
+border: none;
+border-radius: 50%;
+box-shadow: 1px 2px 2px 1px rgba(0, 0, 0, .1);
+background-color: #fdfdfd;
+background-image: linear-gradient(0deg, #fdfdfd 0%, #e5e5e5 50%, #f1f1f1 100%);
 }
-.container .controller .category h1 {
-    font-size: 1.5em;
+
+
+/* Form */
+.wrapper{
+display: -webkit-box;
+display: -ms-flexbox;
+display: flex;
+width: 400px;
+margin: 50vh auto 0;
+-ms-flex-wrap: wrap;
+  flex-wrap: wrap;
+-webkit-transform: translateY(-50%);
+      transform: translateY(-50%);
 }
-.colour_picker input {
-    width: 100%;
-    border: none;
-    text-align: center;
-    font-size: 2em;
-    border-radius: 1em;
-    border: 1px solid #efefef;
+
+.switch_box{
+display: -webkit-box;
+display: -ms-flexbox;
+display: flex;
+max-width: 200px;
+min-width: 200px;
+height: 200px;
+-webkit-box-pack: center;
+  -ms-flex-pack: center;
+      justify-content: center;
+-webkit-box-align: center;
+  -ms-flex-align: center;
+      align-items: center;
+-webkit-box-flex: 1;
+  -ms-flex: 1;
+      flex: 1;
 }
-.colour_picker input:hover {
-    cursor: pointer;
+
+/* Switch 1 Specific Styles Start */
+
+.box_1{
+background: #eee;
+}
+
+input[type="checkbox"].switch_1{
+font-size: 30px;
+-webkit-appearance: none;
+-moz-appearance: none;
+appearance: none;
+width: 3.5em;
+height: 1.5em;
+background: #ddd;
+border-radius: 3em;
+position: relative;
+cursor: pointer;
+outline: none;
+-webkit-transition: all .2s ease-in-out;
+transition: all .2s ease-in-out;
+}
+
+input[type="checkbox"].switch_1:checked{
+background: #23da87;
+}
+
+input[type="checkbox"].switch_1:after{
+position: absolute;
+content: "";
+width: 1.5em;
+height: 1.5em;
+border-radius: 50%;
+background: #fff;
+-webkit-box-shadow: 0 0 .25em rgba(0,0,0,.3);
+      box-shadow: 0 0 .25em rgba(0,0,0,.3);
+-webkit-transform: scale(.7);
+      transform: scale(.7);
+left: 0;
+-webkit-transition: all .2s ease-in-out;
+transition: all .2s ease-in-out;
+}
+
+input[type="checkbox"].switch_1:checked:after{
+left: calc(100% - 1.5em);
+}
+
+/* Switch 1 Specific Style End */
+
+
+/* Switch 2 Specific Style Start */
+
+.box_2{
+background: #666;
+}
+
+input[type="checkbox"].switch_2{
+-webkit-appearance: none;
+ -moz-appearance: none;
+      appearance: none;
+width: 90px;
+height: 8px;
+background: #444;
+border-radius: 5px;
+position: relative;
+outline: 0;
+cursor: pointer;
+}
+
+input[type="checkbox"].switch_2:before,
+input[type="checkbox"].switch_2:after{
+position: absolute;
+content: "";
+-webkit-transition: all .25s;
+transition: all .25s;
+}
+
+input[type="checkbox"].switch_2:before{
+width: 40px;
+height: 40px;
+background: #ccc;
+border: 5px solid #666;
+border-radius: 50%;
+top: 50%;
+left: 0;
+-webkit-transform: translateY(-50%);
+      transform: translateY(-50%);
+}
+
+input[type="checkbox"].switch_2:after{
+width: 30px;
+height: 30px;
+background: #666;
+border-radius: 50%;
+top: 50%;
+left: 10px;
+-webkit-transform: scale(1) translateY(-50%);
+      transform: scale(1) translateY(-50%);
+-webkit-transform-origin: 50% 50%;
+      transform-origin: 50% 50%;
+}
+
+input[type="checkbox"].switch_2:checked:before{
+left: calc(100% - 35px);
+}
+
+input[type="checkbox"].switch_2:checked:after{
+left: 75px;
+-webkit-transform: scale(0);
+      transform: scale(0);
+}
+
+/* Switch 2 Specific Style End */
+
+
+/* Switch 3 Specific Style Start */
+
+.box_3{
+background: #19232b;
+}
+
+.toggle_switch{
+width: 90px;
+height: 45px;
+position: relative;
+}
+
+input[type="checkbox"].switch_3{
+-webkit-appearance: none;
+ -moz-appearance: none;
+      appearance: none;
+position: absolute;
+top: 0;
+right: 0;
+bottom: 0;
+left: 0;
+width: 100%;
+height: 100%;
+cursor: pointer;
+outline: 0;
+z-index: 1;
+}
+
+svg.checkbox .outer-ring{
+stroke-dasharray: 375;
+stroke-dashoffset: 375;
+-webkit-animation: resetRing .35s ease-in-out forwards;
+      animation: resetRing .35s ease-in-out forwards;
+}
+
+input[type="checkbox"].switch_3:checked + svg.checkbox .outer-ring{
+-webkit-animation: animateRing .35s ease-in-out forwards;
+      animation: animateRing .35s ease-in-out forwards;
+}
+
+input[type="checkbox"].switch_3:checked + svg.checkbox .is_checked{
+opacity: 1;
+-webkit-transform: translateX(0) rotate(0deg);
+      transform: translateX(0) rotate(0deg);
+}
+
+input[type="checkbox"].switch_3:checked + svg.checkbox .is_unchecked{
+opacity: 0;
+-webkit-transform: translateX(-200%) rotate(180deg);
+      transform: translateX(-200%) rotate(180deg);
+}
+
+
+svg.checkbox{
+position: absolute;
+top: 0;
+right: 0;
+bottom: 0;
+left: 0;
+width: 100%;
+height: 100%;
+}
+
+svg.checkbox .is_checked{
+opacity: 0;
+fill: yellow;
+-webkit-transform-origin: 50% 50%;
+      transform-origin: 50% 50%;
+-webkit-transform: translateX(200%) rotate(45deg);
+      transform: translateX(200%) rotate(45deg);
+-webkit-transition: all .35s;
+transition: all .35s;
+}
+
+svg.checkbox .is_unchecked{
+opacity: 1;
+fill: #fff;
+-webkit-transform-origin: 50% 50%;
+      transform-origin: 50% 50%;
+-webkit-transform: translateX(0) rotate(0deg);
+      transform: translateX(0) rotate(0deg);
+-webkit-transition: all .35s;
+transition: all .35s;
+}
+
+@-webkit-keyframes animateRing{
+to{
+stroke-dashoffset: 0;
+stroke: #b0aa28;
+}
+}
+
+@keyframes animateRing{
+to{
+stroke-dashoffset: 0;
+stroke: #b0aa28;
+}
+}
+
+@-webkit-keyframes resetRing{
+to{
+stroke-dashoffset: 0;
+stroke: #233043;
+}
+}
+
+@keyframes resetRing{
+to{
+stroke-dashoffset: 0;
+stroke: #233043;
+}
+}
+
+/* Switch 3 Specific Style End */
+
+
+/* Switch 4 Specific Style Start */
+
+.box_4{
+background: #eee;
+}
+
+.input_wrapper{
+width: 80px;
+height: 40px;
+position: relative;
+cursor: pointer;
+}
+
+.input_wrapper input[type="checkbox"]{
+width: 80px;
+height: 40px;
+cursor: pointer;
+-webkit-appearance: none;
+ -moz-appearance: none;
+      appearance: none;
+background: #315e7f;
+border-radius: 2px;
+position: relative;
+outline: 0;
+-webkit-transition: all .2s;
+transition: all .2s;
+}
+
+.input_wrapper input[type="checkbox"]:after{
+position: absolute;
+content: "";
+top: 3px;
+left: 3px;
+width: 34px;
+height: 34px;
+background: #dfeaec;
+z-index: 2;
+border-radius: 2px;
+-webkit-transition: all .35s;
+transition: all .35s;
+}
+
+.input_wrapper svg{
+position: absolute;
+top: 50%;
+-webkit-transform-origin: 50% 50%;
+      transform-origin: 50% 50%;
+fill: #fff;
+-webkit-transition: all .35s;
+transition: all .35s;
+z-index: 1;
+}
+
+.input_wrapper .is_checked{
+width: 18px;
+left: 18%;
+-webkit-transform: translateX(190%) translateY(-30%) scale(0);
+      transform: translateX(190%) translateY(-30%) scale(0);
+}
+
+.input_wrapper .is_unchecked{
+width: 15px;
+right: 10%;
+-webkit-transform: translateX(0) translateY(-30%) scale(1);
+      transform: translateX(0) translateY(-30%) scale(1);
+}
+
+/* Checked State */
+.input_wrapper input[type="checkbox"]:checked{
+background: #23da87;
+}
+
+.input_wrapper input[type="checkbox"]:checked:after{
+left: calc(100% - 37px);
+}
+
+.input_wrapper input[type="checkbox"]:checked + .is_checked{
+-webkit-transform: translateX(0) translateY(-30%) scale(1);
+      transform: translateX(0) translateY(-30%) scale(1);
+}
+
+.input_wrapper input[type="checkbox"]:checked ~ .is_unchecked{
+-webkit-transform: translateX(-190%) translateY(-30%) scale(0);
+      transform: translateX(-190%) translateY(-30%) scale(0);
+}
+
+/* Switch 4 Specific Style End */
+
+.custom_input .jscolor {
+border: 1px solid #efefef;
+width: 100%;
+height: 2em;
+padding: 0 4em;
+text-align: center;
+font-size: 4em;
+font-family: 'Nunito', sans-serif;
+border-radius: 1em;
+box-shadow: 1px 2px 2px 1px rgba(0, 0, 0, .1);
+}
+
+input.switch_1 {
+zoom: .6;
+}
+.custom_input input:hover { cursor: pointer; }
+
+.color_picker { padding: 1.75em 0 1em 0; }
+
+h2 {
+font-size: 1em;
+color: rgba(45, 52, 73, 0.63);
+}
+
+.mode, .scenes {
+padding: 2em 0em;
+border-bottom: 1px solid #e8e8e8;
+}
+
+#title { font-size: 1em; font-weight: bold;}
+
+ol#mode_list li button:hover, ol#scene_list li button:hover {
+margin: 0 auto;
+width: 9em;
+height: 9em;
+border: none;
+border-radius: 50%;
+cursor: pointer;
+}
+
+ol#mode_list li button:hover, ol#scene_list li button:hover {
+-webkit-transition: all 0.5s;
+-moz-transition: all 0.5s;
+transition: all 0.5s;
+-webkit-animation: neon1 0.5s ease-out infinite alternate;
+-moz-animation: neon1 0.5s ease-out infinite alternate;
+animation: neon1 0.5s ease-out infinite alternate;
+}
+
+.current_light {
+-webkit-transition: all 0.5s;
+-moz-transition: all 0.5s;
+transition: all 0.5s;
+-webkit-animation: neon1 3s ease-in-out infinite alternate;
+-moz-animation: neon1 3s ease-in-out infinite alternate;
+animation: neon1 3s ease-in-out infinite alternate;
+}
+
+.current_svg {
+-webkit-transition: all 0.5s;
+-moz-transition: all 0.5s;
+transition: all 0.5s;
+-webkit-animation: icon1 3s ease-in-out infinite alternate;
+-moz-animation: icon1 3s ease-in-out infinite alternate;
+animation: icon1 3s ease-in-out infinite alternate;
+}
+
+
+
+/*glow for webkit*/
+
+@-webkit-keyframes neon1 {
+from {
+box-shadow: 0 0 15px #fff, 0 0 20px #fff, 0 0 30px #fff, 0 0 40px #23da87, 0 0 30px #23da87, 0 0 80px #23da87, 0 0 90px #23da87, 0 0 100px #23da815
+
+}
+to {
+box-shadow: 0 0 15px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #23da87, 0 0 35px #23da87, 0 0 40px #23da87, 0 0 50px #23da87, 0 0 75px #23da87;
+
+}
+}
+
+/*glow for mozilla*/
+
+@-moz-keyframes neon1 {
+from {
+box-shadow: 0 0 15px #fff, 0 0 15px #fff, 0 0 20px #fff, 0 0 25px #23da87, 0 0 40px #23da87, 0 0 60px #23da87, 0 0 80px #23da87, 0 0 90px #23da87;
+}
+to {
+box-shadow: 0 0 15px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #23da87, 0 0 35px #23da87, 0 0 40px #23da87, 0 0 50px #23da87, 0 0 75px #23da87;
+
+}
+}
+
+/*glow*/
+
+@keyframes neon1 {
+from {
+box-shadow: 0 0 15px #fff, 0 0 20px #fff, 0 0 30px #fff, 0 0 40px #23da87, 0 0 30px #23da87, 0 0 80px #23da87, 0 0 90px #23da87, 0 0 100px #23da815
+
+}
+to {
+box-shadow: 0 0 15px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #23da87, 0 0 35px #23da87, 0 0 40px #23da87, 0 0 50px #23da87, 0 0 75px #23da87;
+}
+}
+
+
+/*glow for webkit*/
+
+@-webkit-keyframes icon1 {
+from {
+fill: #000;
+}
+to {
+fill: #23da87;
+}
+}
+
+/*glow for mozilla*/
+
+@-moz-keyframes icon1 {
+from {
+fill: #000;
+}
+to {
+fill: #23da87;
+}
+}
+
+/*glow*/
+
+@keyframes icon1 {
+from {
+fill: #000;
+}
+to {
+fill: #23da87;
+}
+}
+
+@media screen and (max-width : 900px) {
+.custom_input .jscolor { padding: 0; }
 }
