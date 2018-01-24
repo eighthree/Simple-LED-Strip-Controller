@@ -20,9 +20,11 @@
 * Uses websockets
 * Minimized SPIFF use, embeds minified CSS/JS
 * New web interface
-* 1.0x random crashes and reboots should no longer happen (yay!)
 * Exposes all WS2812FX library modes
 * Backwards compatible with previous homebridge support
+* 1.0x related random crashes and reboots should no longer happen _*_
+
+_* Spamming mode changes and colour settings can cause the ESP8266 to crash and burn. Still investigating._
 
 ## Hardware
 #### Requirements
@@ -64,13 +66,13 @@ Want multi-client, MQTT, OTA support? Check out/support this excellent project:
 Install https://github.com/nfarina/homebridge on a Raspberry Pi or similar and
 install this accessory https://github.com/metbosch/homebridge-http-rgb-bulb
 
-The address for the LED strip is deskstrip.local, you should probably change
-this to something else if you are planning to have more than one installation.
+The address for the LED strip is ledstrip.local, you should probably change
+this in config.h to something else if you are planning to have more than one installation.
 
 ### Sample Homebridge Accessory Config
 `{
- "set_url": "http://deskstrip.local/rgb?color=0x%s",
- "get_url": "http://deskstrip.local/rgb?format=hex",
+ "set_url": "http://ledstrip.local/rgb?color=0x%s",
+ "get_url": "http://ledstrip.local/rgb?format=hex",
  "http_method": "GET",
  "manufacturer": "github.com/eighthree",
  "model": "Simple LED Strip",
