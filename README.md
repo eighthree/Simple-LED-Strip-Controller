@@ -24,7 +24,7 @@
 * Backwards compatible with previous homebridge support
 * 1.0x related random crashes and reboots should no longer happen _*_
 
-_* Spamming mode changes and colour settings can cause the ESP8266 to crash and burn. Still investigating._
+_* Spamming mode changes and colour settings can cause the ESP8266 to crash and burn. Still investigating (see https://github.com/esp8266/Arduino/issues/2504#issuecomment-336354906)._
 
 ## Hardware
 #### Requirements
