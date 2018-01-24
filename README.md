@@ -19,12 +19,15 @@
 #### 2.0
 * Uses websockets
 * Minimized SPIFF use, embeds minified CSS/JS
-* New web interface
-* Exposes all WS2812FX library modes
+* New web interface, uses Google fonts and jQuery
+* Exposes all WS2812FX library modes and stores via localStorage
 * Backwards compatible with previous homebridge support
 * 1.0x related random crashes and reboots should no longer happen _*_
 
 _* Spamming mode changes and colour settings can cause the ESP8266 to crash and burn. Still investigating (see https://github.com/esp8266/Arduino/issues/2504#issuecomment-336354906)._
+
+#### 1.x
+* No longer supported, 2.0 is backwards compatible just make sure to update the configuration.
 
 ## Hardware
 #### Requirements
@@ -40,8 +43,13 @@ Adafruit has written a detailed guide on NeoPixels along with
 best practices and code examples: https://learn.adafruit.com/adafruit-neopixel-uberguide/overview
 
 ## Software Setup
-* Perform 'ESP8266 Sketch Data Upload' for jscolor
-* Compile and upload sketch
+1. Download and install Arduino 1.8.5 IDE and the libraries listed below using the library manager (Sketch -> Include Library -> Manage Libraries)
+2. Perform 'ESP8266 Sketch Data Upload' to upload minified jscolor js library
+3. Edit config.h
+4. Compile and upload sketch (80/160MHz, LwIP Variant v1.4 Prebuilt)
+5. Hit the reset button twice to enable wifi manager, connect to the new access point (default: ledstrip) and setup wifi for the device.
+6. Open browser to http://ledstrip.local , the page will reload once the first time you visit it on any device. Modes buttons should appear on refresh.
+7. Eat cake.
 
 #### Libraries
 * ESP8266WiFi, https://github.com/esp8266/Arduino
@@ -58,7 +66,7 @@ best practices and code examples: https://learn.adafruit.com/adafruit-neopixel-u
 * Standard Libraries: time.h, FS.h
 
 This project is a light weight LED Strip controller.
-Want multi-client, MQTT, OTA support? Check out/support this excellent project:
+Want multi-client, MQTT & OTA support? Check out/support this excellent project:
 * https://github.com/toblum/McLighting/
 
 
@@ -69,17 +77,20 @@ install this accessory https://github.com/metbosch/homebridge-http-rgb-bulb
 The address for the LED strip is ledstrip.local, you should probably change
 this in config.h to something else if you are planning to have more than one installation.
 
-### Sample Homebridge Accessory Config
-`{
+#### Sample Homebridge Accessory Config
+
+```bash
+{
  "set_url": "http://ledstrip.local/rgb?color=0x%s",
  "get_url": "http://ledstrip.local/rgb?format=hex",
  "http_method": "GET",
  "manufacturer": "github.com/eighthree",
  "model": "Simple LED Strip",
  "serial": "VULPEio-001"
-}`
+}
+```
 
-## Examples
+## Usage Examples
 Expand functionality by using the LED strip as a visual notification tool.
 
 #### Colour Sensor to LED Strip (Micropython)
