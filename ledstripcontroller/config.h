@@ -17,7 +17,7 @@
 
   DEFAULT_BRIGHTNESS must be set appropriately.
 */
-#define LED_PIN D4
+#define LED_PIN D6 
 #define LED_COUNT 120
 #define DEFAULT_COLOR 0xFF5900
 #define DEFAULT_BRIGHTNESS 200        // Set this conservatively based on your power supply. 
