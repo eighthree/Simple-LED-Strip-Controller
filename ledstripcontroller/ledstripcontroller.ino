@@ -125,7 +125,6 @@ void setup() {
   /* Serve Static Files */
   server.serveStatic("/jscolor.min.js",  SPIFFS, "/jscolor.min.js" ,"max-age=86400"); 
 
-
   // Add service to MDNS
   MDNS.addService("http", "tcp", 80);
   MDNS.addService("ws", "tcp", 81);
@@ -159,7 +158,8 @@ void loop() {
   ws2812fx.service();
 
   // losing bytes work around
-  if(HEAPCHECKER && currentMillis - previousMillis > interval){          
+  if(HEAPCHECKER && currentMillis - previousMillis > interval){   
+    yield();       
     tcpCleanup();           
     Serial.printf("tcpCleanup completed\n");
     previousMillis = currentMillis;

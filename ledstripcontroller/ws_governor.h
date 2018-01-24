@@ -18,19 +18,17 @@ void setColour(uint8_t * wsPayload) {
   R_LED = rgb >> 16;
   G_LED = rgb >> 8 & 0xFF;
   B_LED = rgb & 0xFF;
-  
+  yield();
   ws2812fx.setMode(FX_MODE_STATIC);
   ws2812fx.setColor(rgb);
 }
 
 void setFX (uint8_t * wsPayload) {
   uint8_t modeValue = (uint8_t) strtol((const char *) &wsPayload[1], NULL, 10);
-  Serial.println("##################################");
   Serial.println(modeValue);
   CURRENT_MODE = modeValue;
-  
+  yield();
   ws2812fx.setMode(modeValue);
-  ws2812fx.start();
 }
 
 
@@ -45,7 +43,6 @@ void handleGenericArgs() {
 long currentRGB =(R_LED << 16L) | (G_LED << 8) | B_LED;
 String currentHEX = String(currentRGB, HEX); 
 
-          
   for (int i = 0; i < server.args(); i++) {
     
     if(server.argName(i) == "color")
@@ -64,9 +61,11 @@ String currentHEX = String(currentRGB, HEX);
       
       ws2812fx.setMode(FX_MODE_STATIC);
       ws2812fx.setColor((uint32_t) rgb_value);
+      yield();
       server.send(200, "text/plain", String(rgb_value));
     } else if(server.argName(i) == "format") {
         if(server.arg(i) == "hex") {
+          yield();
           server.send(200, "text/plain", currentHEX);    
         }
     }
@@ -120,16 +119,19 @@ String jsonBuildModeList() {
 }
 
 void jsonModeList() {
+  yield();
   server.send ( 200, "application/json", jsonBuildModeList() );
 }
 
 void jsonSettingsList() {
+  yield();
   server.send( 200, "application/json", jsonBuildSettingsList() );
 }
 
 /*"set_url": "http://deskstrip.local/rgb?color=0x%s", "get_url": "http://deskstrip.local/hex",  */
 void txtCurrentHex() {
   String currentHex = String((R_LED << 16L) | (G_LED << 8) | B_LED, HEX); 
+  yield();
   server.send( 200, "text/plain", currentHex);
 }
 
@@ -154,10 +156,12 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
             Serial.printf("[%u] get Text: %s\n", num, payload);
 
             if(payload[0] == '#') {
-                setColour(payload);
-                webSocket.sendTXT(num, "OK");
+              setColour(payload);
+              yield();
+              webSocket.sendTXT(num, "OK");
             } else if (payload[0] == '*') {
               setFX(payload);
+              yield();
               webSocket.sendTXT(num, "OK");
             }
 
