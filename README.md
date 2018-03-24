@@ -22,9 +22,8 @@
 * New web interface, uses Google fonts and jQuery
 * Exposes all WS2812FX library modes and stores via localStorage
 * Backwards compatible with previous homebridge support
-* 1.0x related random crashes and reboots should no longer happen _*_
+* 1.0x related random crashes and reboots should no longer happen, see: https://github.com/esp8266/Arduino/commit/3267443348a3b8f783dc2dd77f9db3a9a4aacc58
 
-_* Spamming mode changes and colour settings can cause the ESP8266 to crash and burn. Still investigating (see https://github.com/esp8266/Arduino/issues/2504#issuecomment-336354906)._
 
 #### 1.x
 * No longer supported, 2.0 is backwards compatible just make sure to update the configuration.
